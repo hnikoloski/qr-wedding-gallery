@@ -217,6 +217,11 @@ const UploadGuide = () => {
               borderRadius="full"
               bgGradient="linear(to-r, pink.400, purple.500)"
               color="white"
+              w="32px"
+              h="32px"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
             >
               <Icon as={Heart} boxSize={4} />
             </Box>
@@ -284,6 +289,11 @@ const UploadGuide = () => {
                     bg={`${step.color.split(".")[0]}.100`}
                     border="2px solid"
                     borderColor={step.color}
+                    w="40px"
+                    h="40px"
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
                   >
                     <Icon as={step.icon} boxSize={4} color={step.color} />
                   </Box>
@@ -336,6 +346,11 @@ const UploadGuide = () => {
                     bg={`${step.color.split(".")[0]}.100`}
                     border="2px solid"
                     borderColor={step.color}
+                    w="48px"
+                    h="48px"
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
                   >
                     <Icon as={step.icon} boxSize={5} color={step.color} />
                   </Box>
