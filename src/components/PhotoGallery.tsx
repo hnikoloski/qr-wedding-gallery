@@ -107,6 +107,42 @@ export default function PhotoGallery({
     setLightboxOpen(true);
   };
 
+  const closeLightbox = () => {
+    // Pause all videos when closing lightbox
+    pauseAllVideos();
+    setLightboxOpen(false);
+  };
+
+  const handleSlideChange = (index: number) => {
+    // Pause all videos when changing slides
+    pauseAllVideos();
+    setPhotoIndex(index);
+  };
+
+  const pauseAllVideos = () => {
+    // Pause all video elements in the page
+    const videos = document.querySelectorAll("video");
+    videos.forEach((video) => {
+      if (!video.paused) {
+        video.pause();
+      }
+    });
+
+    // Also try to pause videos in iframes (though this may not work due to cross-origin restrictions)
+    const iframes = document.querySelectorAll("iframe");
+    iframes.forEach((iframe) => {
+      try {
+        // This will only work for same-origin iframes
+        iframe.contentWindow?.postMessage(
+          '{"event":"command","func":"pauseVideo","args":""}',
+          "*"
+        );
+      } catch (e) {
+        // Silently ignore cross-origin errors
+      }
+    });
+  };
+
   const goToPage = (page: number) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
@@ -898,9 +934,12 @@ export default function PhotoGallery({
         {/* Professional Lightbox */}
         <Lightbox
           open={lightboxOpen}
-          close={() => setLightboxOpen(false)}
+          close={closeLightbox}
           slides={slides}
           index={photoIndex}
+          on={{
+            view: ({ index }: { index: number }) => handleSlideChange(index),
+          }}
           plugins={[Thumbnails, Fullscreen, Slideshow, Zoom, Video]}
           render={{
             slide: ({ slide }) => {
