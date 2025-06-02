@@ -141,19 +141,6 @@ export default function Home() {
     fetchPhotos(); // Always bypass cache for immediate updates
   }, [addPhotos, clearPhotos, toast]);
 
-  // Add periodic refresh to ensure gallery stays up-to-date
-  useEffect(() => {
-    const refreshInterval = setInterval(() => {
-      // Only auto-refresh if not currently loading
-      if (!isLoading && !isRefreshing) {
-        console.log("Auto-refreshing gallery to check for new photos...");
-        fetchPhotos(false); // Silent refresh without toast
-      }
-    }, 30000); // Refresh every 30 seconds
-
-    return () => clearInterval(refreshInterval);
-  }, [isLoading, isRefreshing]);
-
   return (
     <Container maxW="container.xl" py={8}>
       <PerformanceMonitor />
