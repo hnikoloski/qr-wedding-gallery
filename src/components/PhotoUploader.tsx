@@ -951,9 +951,18 @@ export default function PhotoUploader({
                 position="relative"
                 overflow="hidden"
               >
-                <Flex align="center" gap={3}>
+                <Flex
+                  align="center"
+                  gap={3}
+                  flexWrap="wrap"
+                  justifyContent="center"
+                >
                   <Icon as={Upload} boxSize={5} />
-                  <Text>
+                  <Text
+                    display={{ base: "block", md: "block" }}
+                    fontSize="md"
+                    fontWeight="semibold"
+                  >
                     {selectedFiles.length > MAX_FILES
                       ? `Премногу фајлови (${selectedFiles.length}/${MAX_FILES})`
                       : isUploading
