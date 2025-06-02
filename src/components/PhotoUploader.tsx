@@ -211,22 +211,9 @@ const UploadGuide = () => {
       <CardBody p={{ base: 4, md: 6 }}>
         <VStack spacing={{ base: 4, md: 3 }} align="stretch">
           {/* Compact Header */}
-          <HStack spacing={3} justify="center">
-            <Box
-              p={2}
-              borderRadius="full"
-              bgGradient="linear(to-r, pink.400, purple.500)"
-              color="white"
-              w="32px"
-              h="32px"
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-            >
-              <Icon as={Heart} boxSize={4} />
-            </Box>
+          <HStack spacing={3} justify="center" mb={3}>
             <Heading
-              size={{ base: "md", md: "sm" }}
+              size={{ base: "lg", md: "lg" }}
               color="gray.700"
               textAlign="center"
             >
@@ -234,54 +221,39 @@ const UploadGuide = () => {
             </Heading>
           </HStack>
 
-          {/* Compact Steps - Mobile (Horizontal Scroll) */}
-          <Box display={{ base: "block", md: "none" }}>
-            <HStack
-              spacing={4}
-              overflowX="auto"
-              pb={2}
-              css={{
-                "&::-webkit-scrollbar": {
-                  height: "4px",
-                },
-                "&::-webkit-scrollbar-track": {
-                  background: "#f1f1f1",
-                  borderRadius: "10px",
-                },
-                "&::-webkit-scrollbar-thumb": {
-                  background: "#e0aaff",
-                  borderRadius: "10px",
-                },
-              }}
-            >
+          {/* Compact Steps - Mobile (Vertical Stack) */}
+          <Box display={{ base: "block", md: "none" }} mb={1}>
+            <VStack spacing={3} align="stretch">
               {[
                 {
                   icon: Smartphone,
                   title: "1. Фотографирајте",
+                  subtitle: "Направете фотографии",
                   color: "blue.500",
                 },
                 {
                   icon: Camera,
-                  title: "2. Изберете",
+                  title: "2. Изберете ",
+                  subtitle: "Притиснете копчето",
                   color: "green.500",
                 },
                 {
-                  icon: User,
-                  title: "3. Внесете име",
-                  color: "purple.500",
-                },
-                {
                   icon: Share,
-                  title: "4. Прикачете",
+                  title: "3. Споделете",
+                  subtitle: "Прикачете ги",
                   color: "pink.500",
                 },
               ].map((step, index) => (
-                <VStack
+                <HStack
                   key={index}
-                  spacing={2}
-                  minW="80px"
-                  textAlign="center"
-                  flexShrink={0}
+                  spacing={4}
+                  align="center"
+                  bg="white"
+                  p={3}
+                  borderRadius="lg"
+                  border="1px solid"
+                  borderColor="gray.100"
+                  boxShadow="0 1px 3px rgba(0,0,0,0.05)"
                 >
                   <Box
                     p={2}
@@ -294,20 +266,21 @@ const UploadGuide = () => {
                     display="flex"
                     alignItems="center"
                     justifyContent="center"
+                    flexShrink={0}
                   >
                     <Icon as={step.icon} boxSize={4} color={step.color} />
                   </Box>
-                  <Text
-                    fontSize="xs"
-                    fontWeight="semibold"
-                    color="gray.700"
-                    lineHeight="1.2"
-                  >
-                    {step.title}
-                  </Text>
-                </VStack>
+                  <VStack spacing={0} align="start" flex="1">
+                    <Text fontSize="sm" fontWeight="bold" color="gray.700">
+                      {step.title}
+                    </Text>
+                    <Text fontSize="xs" color="gray.500">
+                      {step.subtitle}
+                    </Text>
+                  </VStack>
+                </HStack>
               ))}
-            </HStack>
+            </VStack>
           </Box>
 
           {/* Compact Steps - Desktop (Horizontal) */}
@@ -327,14 +300,8 @@ const UploadGuide = () => {
                   color: "green.500",
                 },
                 {
-                  icon: User,
-                  title: "3. Внесете име",
-                  subtitle: "Опционално",
-                  color: "purple.500",
-                },
-                {
                   icon: Share,
-                  title: "4. Споделете",
+                  title: "3. Споделете",
                   subtitle: "Прикачете ги",
                   color: "pink.500",
                 },
@@ -398,7 +365,7 @@ const UploadGuide = () => {
               <HStack spacing={2}>
                 <Icon as={Check} color="green.500" boxSize={3} />
                 <Text fontSize="xs" color="gray.600">
-                  Кандидни моменти
+                  Спонтани моменти
                 </Text>
               </HStack>
             </HStack>
