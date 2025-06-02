@@ -766,30 +766,39 @@ export default function PhotoGallery({
                   bg="gray.50"
                 >
                   {isVideo ? (
-                    // Use blob URL for immediate playback if available and still processing
-                    photoObject?.tempBlobUrl && photoObject?.isProcessing ? (
-                      <video
-                        src={photoObject.tempBlobUrl}
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
+                    // Show static thumbnail for videos in gallery, not playable content
+                    photoObject?.thumbnailUrl ? (
+                      <Image
+                        src={photoObject.thumbnailUrl}
+                        alt={`Wedding video ${index + 1} thumbnail`}
+                        fill
+                        style={{ objectFit: "cover" }}
+                        sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                        placeholder="blur"
+                        blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkrHB0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R/aQVoSYVRVVKUpJJZWk2UopimKYqhslKIqqXKKUpJNzylFKUkm5RS6LUalQD6oa1BLy1eO2sBjOeaLQlJJuQaduzmnY3CSpQqQSA9sNJNOdLcOYG/4ZjlIyiLAo5fOi/LNH3FwcTH5CFAUx1n8RkRm8Lq7WGHpLGLGVKQIANEJORHTR6P5UDbwmSHB4YO5TP1IvmlNFqZNiWUdCDLdoebRCx7O1S7p4iYZNJJ1jKSh8gO9iKJ+ij3i9m1gBZ6pDLbO/AwvIUpREBAOGS1pR1lNKUdSKSSlLaIDUgTJxcUGKlERV1BWKQOTYRNWPWcOdVWH0Q0Dp0SZXEZlTNtxSJH5HkBgNGHSDADRRB9ISKS8rNn8HlWYGgR+TbLT8iLM1SjqSECT10LlAp5b1GKJUUpZoFMR0KEU1FX8K5T++qlJ6v88jqo5Xgc1C3kJAZYxkmKFpwA+PJhVHJ+BLqQJJ2I/DGJ4QJy0x7kzFhNXu8K+Cb17PGc+K1J1dXdKhFlvOVLlFVLSYJslJNc7pJKUkqKUkv/AP/Z"
+                        onLoad={(e) => {
+                          e.currentTarget.style.opacity = "1";
                         }}
-                        muted
-                        preload="metadata"
-                        controls={false} // Controls will be in lightbox
                       />
                     ) : (
-                      <iframe
-                        src={photo}
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          border: "none",
-                        }}
-                        allow="autoplay"
-                        title={`Wedding video ${index + 1}`}
-                      />
+                      // Fallback video placeholder thumbnail
+                      <Box
+                        width="100%"
+                        height="100%"
+                        bg="gray.200"
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="center"
+                        flexDirection="column"
+                        color="gray.500"
+                      >
+                        <Box fontSize="4xl" mb={2}>
+                          🎬
+                        </Box>
+                        <Text fontSize="sm" fontWeight="bold">
+                          VIDEO
+                        </Text>
+                      </Box>
                     )
                   ) : (
                     <Image
