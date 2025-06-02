@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import path from "path";
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,12 +10,48 @@ export async function POST(request: NextRequest) {
     const bucketName = process.env.GOOGLE_CLOUD_STORAGE_BUCKET;
     const credentials = process.env.GOOGLE_CLOUD_CREDENTIALS;
     
-    if (!projectId || !bucketName || !credentials) {
-      console.error('Missing required environment variables');
+    if (!projectId || !bucketName) {
+      console.error('Missing required environment variables: PROJECT_ID or BUCKET_NAME');
       return NextResponse.json(
         { success: false, error: "Storage service not properly configured" },
         { status: 500 }
       );
+    }
+
+    let credentialsObj;
+
+    // Check if we're in production with environment variable credentials
+    if (credentials) {
+      // Production: Use credentials from environment variable
+      console.log('Using credentials from environment variable');
+      credentialsObj = JSON.parse(credentials);
+    } else {
+      // Development: Check for key file path in environment variable first
+      const keyFilePath = process.env.GOOGLE_CLOUD_KEY_FILE;
+      let keyPath;
+      
+      if (keyFilePath) {
+        // Use path from environment variable
+        keyPath = path.isAbsolute(keyFilePath) ? keyFilePath : path.join(process.cwd(), keyFilePath);
+        console.log('Using credentials file path from environment variable:', keyPath);
+      } else {
+        // Fallback to default path
+        keyPath = path.join(process.cwd(), 'wedding-storage-key.json');
+        console.log('Using default credentials file path:', keyPath);
+      }
+      
+      try {
+        const fs = require('fs');
+        const keyFile = fs.readFileSync(keyPath, 'utf8');
+        credentialsObj = JSON.parse(keyFile);
+        console.log('Successfully loaded credentials from:', keyPath);
+      } catch (fileError) {
+        console.error('Failed to load credentials file:', fileError);
+        return NextResponse.json(
+          { success: false, error: "Could not load credentials. Please ensure the key file exists or set GOOGLE_CLOUD_CREDENTIALS environment variable." },
+          { status: 500 }
+        );
+      }
     }
 
     const formData = await request.formData();
@@ -31,9 +68,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Parse credentials
-    const credentialsObj = JSON.parse(credentials);
-    
     // Generate unique file name
     const timestamp = Date.now();
     const sanitizedUserName = userName.replace(/[^a-zA-Z0-9]/g, "_") || "Anonymous";

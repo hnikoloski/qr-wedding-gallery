@@ -902,7 +902,7 @@ export default function PhotoUploader({
             {selectedFiles.length > 0 && (
               <Button
                 size="lg"
-                height="60px"
+                height="80px"
                 w="100%"
                 borderRadius="xl"
                 bgGradient={
@@ -958,7 +958,7 @@ export default function PhotoUploader({
                       ? `Премногу фајлови (${selectedFiles.length}/${MAX_FILES})`
                       : isUploading
                       ? `Се прикачува ${overallProgress}%...`
-                      : `Прикачи ${selectedFiles.length} ${
+                      : `Кликни тука за да прикачиш ${selectedFiles.length} ${
                           selectedFiles.length === 1 ? "фајл" : "фајлови"
                         }`}
                   </Text>

@@ -40,22 +40,49 @@ export default function Home() {
       // Clear any stored photos to ensure fresh data from Google Cloud Storage
       clearPhotos();
 
-      // Super aggressive cache-busting with multiple random parameters
+      // ULTRA aggressive cache-busting with multiple layers
       const timestamp = Date.now();
-      const random = Math.random().toString(36).substring(7);
-      const url = `/api/photos?t=${timestamp}&r=${random}&nocache=1&fresh=true`;
+      const random1 = Math.random().toString(36).substring(7);
+      const random2 = Math.random().toString(36).substring(7);
+      const random3 = Math.random().toString(36).substring(7);
+      const sessionId = crypto.randomUUID();
+
+      // Use POST method to bypass GET-based caches entirely
+      const url = `/api/photos`;
+
+      const cacheBustBody = JSON.stringify({
+        timestamp,
+        random1,
+        random2,
+        random3,
+        sessionId,
+        cacheBust: true,
+        bypassCache: true,
+        action: "fetch_photos",
+      });
 
       const response = await fetch(url, {
-        method: "GET",
+        method: "POST", // Use POST to bypass GET-based caches
         cache: "no-store",
         headers: {
-          "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
+          "Content-Type": "application/json",
+          "Cache-Control":
+            "no-cache, no-store, must-revalidate, max-age=0, private",
           Pragma: "no-cache",
           Expires: "-1",
           "X-Requested-With": "XMLHttpRequest",
           "X-Cache-Bust": timestamp.toString(),
-          "X-Random": random,
+          "X-Random-1": random1,
+          "X-Random-2": random2,
+          "X-Random-3": random3,
+          "X-Session-ID": sessionId,
+          "X-Bypass-Cache": "true",
+          "X-Force-Fresh": "true",
+          // Add more cache-busting headers
+          "X-Timestamp": new Date().toISOString(),
+          "X-User-Agent-Hash": btoa(navigator.userAgent).substring(0, 16),
         },
+        body: cacheBustBody,
       });
 
       const data = await response.json();
@@ -113,6 +140,19 @@ export default function Home() {
   useEffect(() => {
     fetchPhotos(); // Always bypass cache for immediate updates
   }, [addPhotos, clearPhotos, toast]);
+
+  // Add periodic refresh to ensure gallery stays up-to-date
+  useEffect(() => {
+    const refreshInterval = setInterval(() => {
+      // Only auto-refresh if not currently loading
+      if (!isLoading && !isRefreshing) {
+        console.log("Auto-refreshing gallery to check for new photos...");
+        fetchPhotos(false); // Silent refresh without toast
+      }
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(refreshInterval);
+  }, [isLoading, isRefreshing]);
 
   return (
     <Container maxW="container.xl" py={8}>
