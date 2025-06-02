@@ -29,19 +29,6 @@ import {
   AlertDescription,
   HStack,
   Divider,
-  Collapse,
-  useDisclosure,
-  Step,
-  StepDescription,
-  StepIcon,
-  StepIndicator,
-  StepNumber,
-  StepSeparator,
-  StepStatus,
-  StepTitle,
-  Stepper,
-  OrderedList,
-  ListItem,
   List,
   ListIcon,
 } from "@chakra-ui/react";
@@ -212,8 +199,6 @@ const UploadPreview = ({
 
 // Step-by-step guide component
 const UploadGuide = () => {
-  const { isOpen, onToggle } = useDisclosure();
-
   return (
     <Card
       variant="outline"
@@ -223,199 +208,186 @@ const UploadGuide = () => {
       bg="gradient-to-br from-pink-50 to-purple-50"
       borderColor="pink.200"
     >
-      <CardBody>
-        <VStack spacing={4} align="stretch">
-          {/* Header with toggle */}
-          <Flex
-            justify="space-between"
-            align="center"
-            cursor="pointer"
-            onClick={onToggle}
-            p={2}
-            borderRadius="lg"
-            _hover={{ bg: "whiteAlpha.500" }}
-            transition="all 0.2s"
-          >
-            <HStack spacing={3}>
-              <Box
-                p={2}
-                borderRadius="full"
-                bgGradient="linear(to-r, pink.400, purple.500)"
-                color="white"
-              >
-                <Icon as={Heart} boxSize={5} />
-              </Box>
-              <VStack spacing={1} align="start">
-                <Heading size="md" color="gray.700">
-                  Како да ги споделите вашите фотографии?
-                </Heading>
-                <Text fontSize="sm" color="gray.600">
-                  {isOpen
-                    ? "Сокриј упатства"
-                    : "Прикажи чекор-по-чекор упатства"}
-                </Text>
-              </VStack>
+      <CardBody p={{ base: 4, md: 6 }}>
+        <VStack spacing={{ base: 4, md: 3 }} align="stretch">
+          {/* Compact Header */}
+          <HStack spacing={3} justify="center">
+            <Box
+              p={2}
+              borderRadius="full"
+              bgGradient="linear(to-r, pink.400, purple.500)"
+              color="white"
+            >
+              <Icon as={Heart} boxSize={4} />
+            </Box>
+            <Heading
+              size={{ base: "md", md: "sm" }}
+              color="gray.700"
+              textAlign="center"
+            >
+              Како да ги споделите вашите фотографии
+            </Heading>
+          </HStack>
+
+          {/* Compact Steps - Mobile (Horizontal Scroll) */}
+          <Box display={{ base: "block", md: "none" }}>
+            <HStack
+              spacing={4}
+              overflowX="auto"
+              pb={2}
+              css={{
+                "&::-webkit-scrollbar": {
+                  height: "4px",
+                },
+                "&::-webkit-scrollbar-track": {
+                  background: "#f1f1f1",
+                  borderRadius: "10px",
+                },
+                "&::-webkit-scrollbar-thumb": {
+                  background: "#e0aaff",
+                  borderRadius: "10px",
+                },
+              }}
+            >
+              {[
+                {
+                  icon: Smartphone,
+                  title: "1. Фотографирајте",
+                  color: "blue.500",
+                },
+                {
+                  icon: Camera,
+                  title: "2. Изберете",
+                  color: "green.500",
+                },
+                {
+                  icon: User,
+                  title: "3. Внесете име",
+                  color: "purple.500",
+                },
+                {
+                  icon: Share,
+                  title: "4. Прикачете",
+                  color: "pink.500",
+                },
+              ].map((step, index) => (
+                <VStack
+                  key={index}
+                  spacing={2}
+                  minW="80px"
+                  textAlign="center"
+                  flexShrink={0}
+                >
+                  <Box
+                    p={2}
+                    borderRadius="full"
+                    bg={`${step.color.split(".")[0]}.100`}
+                    border="2px solid"
+                    borderColor={step.color}
+                  >
+                    <Icon as={step.icon} boxSize={4} color={step.color} />
+                  </Box>
+                  <Text
+                    fontSize="xs"
+                    fontWeight="semibold"
+                    color="gray.700"
+                    lineHeight="1.2"
+                  >
+                    {step.title}
+                  </Text>
+                </VStack>
+              ))}
             </HStack>
-            <Icon
-              as={isOpen ? ChevronUp : ChevronDown}
-              boxSize={6}
-              color="gray.500"
-              transition="transform 0.2s"
-            />
-          </Flex>
+          </Box>
 
-          {/* Collapsible content */}
-          <Collapse in={isOpen} animateOpacity>
-            <VStack spacing={6} align="stretch" pt={4}>
-              {/* Mobile-optimized steps */}
-              <Box display={{ base: "block", md: "none" }}>
-                <VStack spacing={4} align="stretch">
-                  {[
-                    {
-                      icon: Smartphone,
-                      title: "1. Отворете го телефонот",
-                      description:
-                        "Користете ја камерата за да фотографирате или снимите видео од свадбата",
-                      color: "blue.500",
-                    },
-                    {
-                      icon: Camera,
-                      title: "2. Изберете фотографии/видеа",
-                      description:
-                        "Притиснете на 'Додадете фотографии и видеа' копчето подолу",
-                      color: "green.500",
-                    },
-                    {
-                      icon: User,
-                      title: "3. Внесете го вашето име",
-                      description:
-                        "Опционално - кажете ни кој сте за да знаеме кој ги сподели фотографиите",
-                      color: "purple.500",
-                    },
-                    {
-                      icon: Share,
-                      title: "4. Прикачете ги фотографиите",
-                      description:
-                        "Притиснете 'Прикачи' и почекајте да се завршат. Готово!",
-                      color: "pink.500",
-                    },
-                  ].map((step, index) => (
-                    <HStack key={index} spacing={4} align="start">
-                      <Box
-                        flexShrink={0}
-                        p={3}
-                        borderRadius="full"
-                        bg={`${step.color.split(".")[0]}.100`}
-                        border="2px solid"
-                        borderColor={step.color}
-                      >
-                        <Icon as={step.icon} boxSize={6} color={step.color} />
-                      </Box>
-                      <VStack spacing={1} align="start" flex="1">
-                        <Text fontWeight="bold" color="gray.700" fontSize="sm">
-                          {step.title}
-                        </Text>
-                        <Text fontSize="xs" color="gray.600" lineHeight="1.4">
-                          {step.description}
-                        </Text>
-                      </VStack>
-                    </HStack>
-                  ))}
-                </VStack>
-              </Box>
-
-              {/* Desktop version */}
-              <Box display={{ base: "none", md: "block" }}>
-                <SimpleGrid columns={4} spacing={6}>
-                  {[
-                    {
-                      icon: Smartphone,
-                      title: "Фотографирајте",
-                      description:
-                        "Направете прекрасни фотографии и видеа од свадбата",
-                      color: "blue.500",
-                    },
-                    {
-                      icon: Camera,
-                      title: "Изберете фајлови",
-                      description:
-                        "Притиснете на копчето за да ги изберете вашите фотографии",
-                      color: "green.500",
-                    },
-                    {
-                      icon: User,
-                      title: "Внесете име",
-                      description: "Кажете ни кој сте (опционално)",
-                      color: "purple.500",
-                    },
-                    {
-                      icon: Share,
-                      title: "Споделете",
-                      description: "Прикачете ги и споделете ги со сите",
-                      color: "pink.500",
-                    },
-                  ].map((step, index) => (
-                    <VStack key={index} spacing={3} textAlign="center">
-                      <Box
-                        p={4}
-                        borderRadius="full"
-                        bg={`${step.color.split(".")[0]}.100`}
-                        border="3px solid"
-                        borderColor={step.color}
-                      >
-                        <Icon as={step.icon} boxSize={8} color={step.color} />
-                      </Box>
-                      <VStack spacing={1}>
-                        <Text fontWeight="bold" color="gray.700" fontSize="sm">
-                          {step.title}
-                        </Text>
-                        <Text fontSize="xs" color="gray.600" lineHeight="1.3">
-                          {step.description}
-                        </Text>
-                      </VStack>
-                    </VStack>
-                  ))}
-                </SimpleGrid>
-              </Box>
-
-              {/* Tips section */}
-              <Divider borderColor="pink.200" />
-              <Box
-                bg="white"
-                borderRadius="lg"
-                p={4}
-                border="1px solid"
-                borderColor="pink.200"
-              >
-                <VStack spacing={3} align="stretch">
-                  <HStack spacing={2}>
-                    <Icon as={Heart} color="pink.500" boxSize={4} />
-                    <Text fontWeight="semibold" color="gray.700" fontSize="sm">
-                      Совети за подобри фотографии:
+          {/* Compact Steps - Desktop (Horizontal) */}
+          <Box display={{ base: "none", md: "block" }}>
+            <HStack spacing={8} justify="center">
+              {[
+                {
+                  icon: Smartphone,
+                  title: "1. Фотографирајте",
+                  subtitle: "Направете фотографии",
+                  color: "blue.500",
+                },
+                {
+                  icon: Camera,
+                  title: "2. Изберете фајлови",
+                  subtitle: "Притиснете копчето",
+                  color: "green.500",
+                },
+                {
+                  icon: User,
+                  title: "3. Внесете име",
+                  subtitle: "Опционално",
+                  color: "purple.500",
+                },
+                {
+                  icon: Share,
+                  title: "4. Споделете",
+                  subtitle: "Прикачете ги",
+                  color: "pink.500",
+                },
+              ].map((step, index) => (
+                <VStack key={index} spacing={2} textAlign="center" flex="1">
+                  <Box
+                    p={3}
+                    borderRadius="full"
+                    bg={`${step.color.split(".")[0]}.100`}
+                    border="2px solid"
+                    borderColor={step.color}
+                  >
+                    <Icon as={step.icon} boxSize={5} color={step.color} />
+                  </Box>
+                  <VStack spacing={0}>
+                    <Text fontSize="xs" fontWeight="bold" color="gray.700">
+                      {step.title}
                     </Text>
-                  </HStack>
-                  <List spacing={2} fontSize="xs" color="gray.600">
-                    <ListItem>
-                      <ListIcon as={Check} color="green.500" boxSize={3} />
-                      Фотографирајте во добра светлина
-                    </ListItem>
-                    <ListItem>
-                      <ListIcon as={Check} color="green.500" boxSize={3} />
-                      Снимајте кандидни моменти и емоции
-                    </ListItem>
-                    <ListItem>
-                      <ListIcon as={Check} color="green.500" boxSize={3} />
-                      Можете да прикачите до 25 фајлови наеднаш
-                    </ListItem>
-                    <ListItem>
-                      <ListIcon as={Check} color="green.500" boxSize={3} />
-                      Поддржани се фотографии и видеа
-                    </ListItem>
-                  </List>
+                    <Text fontSize="xs" color="gray.500">
+                      {step.subtitle}
+                    </Text>
+                  </VStack>
                 </VStack>
-              </Box>
-            </VStack>
-          </Collapse>
+              ))}
+            </HStack>
+          </Box>
+
+          {/* Compact Tips */}
+          <Box
+            bg="white"
+            borderRadius="lg"
+            p={3}
+            border="1px solid"
+            borderColor="pink.200"
+            display={{ base: "none", md: "block" }}
+          >
+            <HStack spacing={6} justify="center" wrap="wrap">
+              <HStack spacing={2}>
+                <Icon as={Check} color="green.500" boxSize={3} />
+                <Text fontSize="xs" color="gray.600">
+                  До 25 фајлови
+                </Text>
+              </HStack>
+              <HStack spacing={2}>
+                <Icon as={Check} color="green.500" boxSize={3} />
+                <Text fontSize="xs" color="gray.600">
+                  Фотографии и видеа
+                </Text>
+              </HStack>
+              <HStack spacing={2}>
+                <Icon as={Check} color="green.500" boxSize={3} />
+                <Text fontSize="xs" color="gray.600">
+                  Добра светлина
+                </Text>
+              </HStack>
+              <HStack spacing={2}>
+                <Icon as={Check} color="green.500" boxSize={3} />
+                <Text fontSize="xs" color="gray.600">
+                  Кандидни моменти
+                </Text>
+              </HStack>
+            </HStack>
+          </Box>
         </VStack>
       </CardBody>
     </Card>
