@@ -16,7 +16,6 @@
     "@chakra-ui/toast": "^7.0.2",
     "@emotion/react": "^11.11.4",
     "@emotion/styled": "^11.11.0",
-    "@google-cloud/storage": "^7.16.0",
     "@tailwindcss/postcss": "^4.1.5",
     "autoprefixer": "^10.4.21",
     "framer-motion": "^11.0.20",

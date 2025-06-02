@@ -1,79 +1,88 @@
 import { NextResponse } from "next/server";
-import { Storage } from "@google-cloud/storage";
-import path from "path";
-
-// Initialize Google Cloud Storage client
-let storage: Storage;
-let bucket: any;
-
-try {
-  console.log('Initializing Google Cloud Storage for photos API...');
-  
-  // Check if we're in production and have credentials as environment variable
-  if (process.env.GOOGLE_CLOUD_CREDENTIALS) {
-    // Production: Use credentials from environment variable
-    console.log('Using credentials from environment variable');
-    const credentials = JSON.parse(process.env.GOOGLE_CLOUD_CREDENTIALS);
-    
-    storage = new Storage({
-      projectId: process.env.GOOGLE_CLOUD_PROJECT_ID || credentials.project_id,
-      credentials: credentials,
-    });
-  } else {
-    // Development: Use service account key file
-    const keyPath = path.join(process.cwd(), 'wedding-storage-key.json');
-    console.log('Using credentials from key file:', keyPath);
-    
-    storage = new Storage({
-      projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
-      keyFilename: keyPath,
-    });
-  }
-
-  bucket = storage.bucket(process.env.GOOGLE_CLOUD_STORAGE_BUCKET!);
-  console.log('Google Cloud Storage initialized successfully for photos API');
-} catch (initError) {
-  console.error('Failed to initialize Google Cloud Storage:', initError);
-}
 
 export async function GET() {
   try {
-    // Check if storage is initialized
-    if (!storage || !bucket) {
-      console.error('Google Cloud Storage not properly initialized');
+    // Check if we have the required environment variables
+    const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
+    const bucketName = process.env.GOOGLE_CLOUD_STORAGE_BUCKET;
+    const credentials = process.env.GOOGLE_CLOUD_CREDENTIALS;
+    
+    if (!projectId || !bucketName || !credentials) {
+      console.error('Missing required environment variables');
       return NextResponse.json(
-        { error: "Storage service not available" },
+        { error: "Storage service not properly configured" },
         { status: 500 }
       );
     }
 
-    // List all files in the bucket
-    const [files] = await bucket.getFiles({
-      // Only get image and video files
-      prefix: '', // Get all files
+    // Parse credentials
+    const credentialsObj = JSON.parse(credentials);
+
+    // Create JWT token for Google Cloud Storage
+    const now = Math.floor(Date.now() / 1000);
+    const token = await createJWT({
+      iss: credentialsObj.client_email,
+      scope: 'https://www.googleapis.com/auth/cloud-platform',
+      aud: 'https://oauth2.googleapis.com/token',
+      exp: now + 3600,
+      iat: now,
+    }, credentialsObj.private_key);
+
+    // Get access token
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+        assertion: token,
+      }),
     });
+
+    if (!tokenResponse.ok) {
+      throw new Error(`Failed to get access token: ${tokenResponse.statusText}`);
+    }
+
+    const tokenData = await tokenResponse.json();
+    const accessToken = tokenData.access_token;
+
+    // List all files in the bucket using REST API
+    const listUrl = `https://storage.googleapis.com/storage/v1/b/${bucketName}/o`;
+    
+    const listResponse = await fetch(listUrl, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!listResponse.ok) {
+      throw new Error(`Failed to list files: ${listResponse.statusText}`);
+    }
+
+    const listResult = await listResponse.json();
+    const files = listResult.items || [];
 
     // Filter for media files and transform to the expected format
     const photos = files
       .filter((file: any) => {
-        const mimeType = file.metadata.contentType || '';
-        return mimeType.startsWith('image/') || mimeType.startsWith('video/');
+        const contentType = file.contentType || '';
+        return contentType.startsWith('image/') || contentType.startsWith('video/');
       })
       .map((file: any) => {
-        const bucketName = process.env.GOOGLE_CLOUD_STORAGE_BUCKET;
         const fileName = file.name;
         const publicUrl = `https://storage.googleapis.com/${bucketName}/${fileName}`;
-        const isVideo = file.metadata.contentType?.startsWith('video/');
+        const isVideo = file.contentType?.startsWith('video/');
         
         return {
           id: fileName,
-          name: file.metadata.metadata?.originalName || fileName,
-          mimeType: file.metadata.contentType,
-          createdTime: file.metadata.timeCreated,
+          name: file.metadata?.['original-name'] || fileName,
+          mimeType: file.contentType,
+          createdTime: file.timeCreated,
           url: publicUrl,
-          thumbnailUrl: isVideo ? null : publicUrl, // null for videos, actual URL for images
-          uploadedBy: file.metadata.metadata?.uploadedBy || 'Unknown',
-          needsThumbnail: isVideo, // Flag for client-side thumbnail generation
+          thumbnailUrl: isVideo ? null : publicUrl,
+          uploadedBy: file.metadata?.['uploaded-by'] || 'Unknown',
+          needsThumbnail: isVideo,
         };
       })
       .sort((a: any, b: any) => new Date(b.createdTime).getTime() - new Date(a.createdTime).getTime());
@@ -99,4 +108,70 @@ export async function GET() {
       }
     );
   }
+}
+
+// Helper function to create JWT token
+async function createJWT(payload: any, privateKey: string): Promise<string> {
+  const header = {
+    alg: 'RS256',
+    typ: 'JWT',
+  };
+
+  const encodedHeader = base64URLEncode(JSON.stringify(header));
+  const encodedPayload = base64URLEncode(JSON.stringify(payload));
+
+  const signatureInput = `${encodedHeader}.${encodedPayload}`;
+  
+  // Import the private key
+  const key = await crypto.subtle.importKey(
+    'pkcs8',
+    pemToArrayBuffer(privateKey),
+    {
+      name: 'RSASSA-PKCS1-v1_5',
+      hash: 'SHA-256',
+    },
+    false,
+    ['sign']
+  );
+
+  // Sign the token
+  const signature = await crypto.subtle.sign(
+    'RSASSA-PKCS1-v1_5',
+    key,
+    new TextEncoder().encode(signatureInput)
+  );
+
+  const encodedSignature = base64URLEncode(signature);
+  return `${signatureInput}.${encodedSignature}`;
+}
+
+function base64URLEncode(data: string | ArrayBuffer): string {
+  let base64: string;
+  
+  if (typeof data === 'string') {
+    base64 = btoa(data);
+  } else {
+    const bytes = new Uint8Array(data);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    base64 = btoa(binary);
+  }
+  
+  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+function pemToArrayBuffer(pem: string): ArrayBuffer {
+  const base64 = pem
+    .replace(/-----BEGIN PRIVATE KEY-----/, '')
+    .replace(/-----END PRIVATE KEY-----/, '')
+    .replace(/\n/g, '');
+  
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes.buffer;
 } 
