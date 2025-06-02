@@ -88,12 +88,26 @@ export async function GET() {
       .sort((a: any, b: any) => new Date(b.createdTime).getTime() - new Date(a.createdTime).getTime());
 
     console.log("Found photos and videos:", photos.length);
-    return NextResponse.json({ photos }, {
+    return NextResponse.json({ 
+      photos,
+      timestamp: Date.now(), // Add timestamp for cache busting
+      _fresh: true // Marker to indicate this is fresh data
+    }, {
       headers: {
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        // Multiple layers of cache prevention
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
         'Pragma': 'no-cache',
-        'Expires': '0',
+        'Expires': '-1',
         'Surrogate-Control': 'no-store',
+        'CDN-Cache-Control': 'no-store',
+        'Cloudflare-CDN-Cache-Control': 'no-store',
+        'Vercel-CDN-Cache-Control': 'no-store',
+        // Additional headers to prevent any caching
+        'Last-Modified': new Date().toUTCString(),
+        'ETag': `"${Date.now()}"`,
+        'Vary': '*',
+        // CORS headers to prevent preflight caching
+        'Access-Control-Max-Age': '0',
       },
     });
   } catch (error) {

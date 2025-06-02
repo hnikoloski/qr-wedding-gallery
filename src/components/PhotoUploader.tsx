@@ -376,7 +376,13 @@ const UploadGuide = () => {
   );
 };
 
-export default function PhotoUploader() {
+interface PhotoUploaderProps {
+  onUploadComplete?: () => void; // Callback to refresh gallery after successful upload
+}
+
+export default function PhotoUploader({
+  onUploadComplete,
+}: PhotoUploaderProps = {}) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [userName, setUserName] = useState<string>("");
@@ -630,6 +636,10 @@ export default function PhotoUploader() {
           setFileProgress([]);
           setOverallProgress(0);
         }, 2000);
+
+        if (onUploadComplete) {
+          onUploadComplete();
+        }
       } else {
         throw new Error("All uploads failed");
       }

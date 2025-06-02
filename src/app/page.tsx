@@ -40,15 +40,21 @@ export default function Home() {
       // Clear any stored photos to ensure fresh data from Google Cloud Storage
       clearPhotos();
 
-      // Always add cache-busting parameter and headers for immediate updates
-      const url = `/api/photos?t=${Date.now()}`;
+      // Super aggressive cache-busting with multiple random parameters
+      const timestamp = Date.now();
+      const random = Math.random().toString(36).substring(7);
+      const url = `/api/photos?t=${timestamp}&r=${random}&nocache=1&fresh=true`;
 
       const response = await fetch(url, {
+        method: "GET",
         cache: "no-store",
         headers: {
-          "Cache-Control": "no-cache, no-store, must-revalidate",
+          "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
           Pragma: "no-cache",
-          Expires: "0",
+          Expires: "-1",
+          "X-Requested-With": "XMLHttpRequest",
+          "X-Cache-Bust": timestamp.toString(),
+          "X-Random": random,
         },
       });
 
@@ -56,6 +62,8 @@ export default function Home() {
 
       if (response.ok && data.photos) {
         console.log("Received photos from API:", data.photos.length);
+        console.log("API response timestamp:", data.timestamp);
+        console.log("Fresh data marker:", data._fresh);
 
         // Photos are already sorted by createdTime desc from the API
         if (data.photos.length > 0) {
@@ -119,7 +127,7 @@ export default function Home() {
           </Text>
         </Box>
 
-        <PhotoUploader />
+        <PhotoUploader onUploadComplete={() => fetchPhotos(true)} />
         <PhotoGallery
           isLoading={isLoading || isRefreshing}
           onRefresh={handleRefresh}
