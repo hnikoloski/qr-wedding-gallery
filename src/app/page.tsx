@@ -1,103 +1,140 @@
-import Image from "next/image";
+"use client";
+
+import React, { useEffect, useState } from "react";
+import {
+  Box,
+  Container,
+  Heading,
+  Text,
+  VStack,
+  useToast,
+} from "@chakra-ui/react";
+import PhotoUploader from "@/components/PhotoUploader";
+import PhotoGallery from "@/components/PhotoGallery";
+import QRCodeDisplay from "@/components/QRCodeDisplay";
+import PerformanceMonitor from "@/components/PerformanceMonitor";
+import { usePhotoStore } from "@/store/photoStore";
+
+interface PhotoResponse {
+  id: string;
+  name: string;
+  mimeType: string;
+  createdTime: string;
+  url: string;
+  thumbnailUrl: string;
+}
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const { addPhotos, clearPhotos } = usePhotoStore();
+  const toast = useToast();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+  const fetchPhotos = async (bypassCache = false) => {
+    try {
+      const currentlyLoading = isLoading || isRefreshing;
+      if (!currentlyLoading) {
+        setIsRefreshing(true);
+      }
+
+      // Clear any stored photos to ensure fresh data from Google Cloud Storage
+      clearPhotos();
+
+      // Always add cache-busting parameter and headers for immediate updates
+      const url = `/api/photos?t=${Date.now()}`;
+
+      const response = await fetch(url, {
+        cache: "no-store",
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.photos) {
+        console.log("Received photos from API:", data.photos.length);
+
+        // Photos are already sorted by createdTime desc from the API
+        if (data.photos.length > 0) {
+          addPhotos(data.photos);
+        } else {
+          console.log("No photos found in Google Cloud Storage");
+        }
+
+        if (bypassCache) {
+          toast({
+            title: "Сликите се освежија",
+            description: `Има ${data.photos.length} фотографии во галеријата`,
+            status: "success",
+            duration: 3000,
+            isClosable: true,
+          });
+        }
+      } else if (!response.ok) {
+        console.error("Failed to fetch photos:", data.error);
+        toast({
+          title: "Error fetching photos",
+          description: "Could not load photos from Google Cloud Storage",
+          status: "error",
+          duration: 5000,
+          isClosable: true,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching photos:", error);
+      toast({
+        title: "Error refreshing photos",
+        description: "Could not refresh photos from Google Cloud Storage",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    fetchPhotos(true); // Bypass cache
+  };
+
+  useEffect(() => {
+    fetchPhotos(); // Always bypass cache for immediate updates
+  }, [addPhotos, clearPhotos, toast]);
+
+  return (
+    <Container maxW="container.xl" py={8}>
+      <PerformanceMonitor />
+      <VStack spacing={8} align="stretch">
+        <Box textAlign="center" py={6}>
+          <Heading as="h1" size="2xl" mb={2}>
+            Тамара & Христијан
+          </Heading>
+          <Text fontSize="xl" color="gray.600">
+            Споделете ги вашите посебни моменти од нашата свадба
+          </Text>
+        </Box>
+
+        <PhotoUploader />
+        <PhotoGallery
+          isLoading={isLoading || isRefreshing}
+          onRefresh={handleRefresh}
+        />
+
+        <Box mt={10} textAlign="center">
+          <Heading as="h2" size="lg" mb={4}>
+            Share with Friends
+          </Heading>
+          <QRCodeDisplay />
+          <Text mt={4} fontSize="sm" color="gray.500">
+            Scan this QR code to upload your own photos
+          </Text>
+        </Box>
+      </VStack>
+    </Container>
   );
 }

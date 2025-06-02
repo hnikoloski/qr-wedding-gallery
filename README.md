@@ -1,36 +1,105 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Wedding Photo Sharing App
 
-## Getting Started
+A web application that allows wedding guests to scan a QR code, upload photos, take pictures directly from their camera, and view all shared photos. The app uses Google Cloud Storage for fast, reliable storage.
 
-First, run the development server:
+## Features
+
+- Mobile-friendly responsive design
+- QR code generation for easy sharing
+- Photo uploads from device gallery
+- Direct camera capture
+- Photo gallery view
+- Google Cloud Storage integration for fast uploads and no video processing delays
+
+## Tech Stack
+
+- Next.js with React
+- TypeScript
+- Chakra UI for styling
+- Zustand for state management
+- Google Cloud Storage for photo/video storage
+
+## Setup Instructions
+
+### 1. Clone and Install Dependencies
+
+```bash
+git clone <repository-url>
+cd wedding-photo-app
+npm install
+```
+
+### 2. Set Up Google Cloud Storage
+
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project
+3. Enable the Cloud Storage API
+4. Create a storage bucket:
+   - Choose a unique bucket name
+   - Select your preferred region (Europe for GDPR compliance)
+   - Set uniform bucket-level access to "Public"
+5. Create a service account:
+   - Go to IAM & Admin > Service Accounts
+   - Create new service account with Storage Admin role
+   - Download the JSON key file
+6. Make your bucket public:
+   - Go to your bucket permissions
+   - Add `allUsers` with the `Storage Object Viewer` role
+
+### 3. Set Up Budget Alerts (Recommended)
+
+1. Go to Billing in Google Cloud Console
+2. Set up budget alerts at 50%, 90%, and 100% of your monthly limit
+3. Typical wedding usage should be under $5-10/month
+
+### 4. Environment Variables
+
+Create a `.env.local` file with the following variables:
+
+```
+GOOGLE_CLOUD_PROJECT_ID=your_project_id_here
+GOOGLE_CLOUD_STORAGE_BUCKET=your_bucket_name_here
+GOOGLE_CLOUD_KEY_FILE=./wedding-storage-key.json
+```
+
+Place your downloaded service account key file as `wedding-storage-key.json` in the project root.
+
+### 5. Run the Development Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 6. Deploy to Production
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+This app can be easily deployed to Vercel:
 
-## Learn More
+```bash
+npm install -g vercel
+vercel
+```
 
-To learn more about Next.js, take a look at the following resources:
+Make sure to:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Add all environment variables to your Vercel project settings
+- Upload your service account key file securely to Vercel
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Customizing the App
 
-## Deploy on Vercel
+- Update the heading and text in `src/app/page.tsx` to match your wedding details
+- Customize the design in the Chakra UI theme
+- Add additional features like user authentication if needed
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Why Google Cloud Storage?
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- ✅ No video processing delays (unlike Google Drive)
+- ✅ Faster upload speeds
+- ✅ Better cost control with budget alerts
+- ✅ More reliable for high-traffic events
+- ✅ Direct public URLs for media files
+
+## License
+
+MIT

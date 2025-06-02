@@ -9,19 +9,36 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "next": "15.3.1"
+    "@chakra-ui/icons": "^2.2.4",
+    "@chakra-ui/next-js": "^2.4.2",
+    "@chakra-ui/react": "^2.10.7",
+    "@chakra-ui/system": "^2.6.2",
+    "@chakra-ui/toast": "^7.0.2",
+    "@emotion/react": "^11.11.4",
+    "@emotion/styled": "^11.11.0",
+    "@google-cloud/storage": "^7.16.0",
+    "@tailwindcss/postcss": "^4.1.5",
+    "autoprefixer": "^10.4.21",
+    "framer-motion": "^11.0.20",
+    "googleapis": "^133.0.0",
+    "lucide-react": "^0.356.0",
+    "next": "14.1.3",
+    "next-qrcode": "^2.5.1",
+    "postcss": "^8.5.3",
+    "react": "^18",
+    "react-dom": "^18",
+    "react-dropzone": "^14.2.3",
+    "sharp": "^0.34.2",
+    "tailwindcss": "^4.1.5",
+    "yet-another-react-lightbox": "^3.23.2",
+    "zustand": "^4.5.2"
   },
   "devDependencies": {
-    "typescript": "^5",
     "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4",
-    "eslint": "^9",
-    "eslint-config-next": "15.3.1",
-    "@eslint/eslintrc": "^3"
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "eslint": "^8",
+    "eslint-config-next": "14.1.3",
+    "typescript": "^5"
   }
 }
