@@ -7,18 +7,30 @@ let storage: Storage;
 let bucket: any;
 
 try {
-  // Use absolute path for service account key
-  const keyPath = path.join(process.cwd(), 'wedding-storage-key.json');
-  
   console.log('Initializing Google Cloud Storage...');
   console.log('Project ID:', process.env.GOOGLE_CLOUD_PROJECT_ID);
   console.log('Bucket:', process.env.GOOGLE_CLOUD_STORAGE_BUCKET);
-  console.log('Key file path:', keyPath);
 
-  storage = new Storage({
-    projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
-    keyFilename: keyPath,
-  });
+  // Check if we're in production and have credentials as environment variable
+  if (process.env.GOOGLE_CLOUD_CREDENTIALS) {
+    // Production: Use credentials from environment variable
+    console.log('Using credentials from environment variable');
+    const credentials = JSON.parse(process.env.GOOGLE_CLOUD_CREDENTIALS);
+    
+    storage = new Storage({
+      projectId: process.env.GOOGLE_CLOUD_PROJECT_ID || credentials.project_id,
+      credentials: credentials,
+    });
+  } else {
+    // Development: Use service account key file
+    const keyPath = path.join(process.cwd(), 'wedding-storage-key.json');
+    console.log('Using credentials from key file:', keyPath);
+    
+    storage = new Storage({
+      projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
+      keyFilename: keyPath,
+    });
+  }
 
   bucket = storage.bucket(process.env.GOOGLE_CLOUD_STORAGE_BUCKET!);
   console.log('Google Cloud Storage initialized successfully');
