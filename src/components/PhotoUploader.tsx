@@ -29,9 +29,36 @@ import {
   AlertDescription,
   HStack,
   Divider,
+  Collapse,
+  useDisclosure,
+  Step,
+  StepDescription,
+  StepIcon,
+  StepIndicator,
+  StepNumber,
+  StepSeparator,
+  StepStatus,
+  StepTitle,
+  Stepper,
+  OrderedList,
+  ListItem,
+  List,
+  ListIcon,
 } from "@chakra-ui/react";
 import { useToast } from "@chakra-ui/toast";
-import { Upload, X, User, Check, AlertCircle } from "lucide-react";
+import {
+  Upload,
+  X,
+  User,
+  Check,
+  AlertCircle,
+  ChevronDown,
+  ChevronUp,
+  Camera,
+  Smartphone,
+  Heart,
+  Share,
+} from "lucide-react";
 import { usePhotoStore } from "@/store/photoStore";
 import {
   uploadToGoogleCloudStorage,
@@ -180,6 +207,218 @@ const UploadPreview = ({
         );
       })}
     </SimpleGrid>
+  );
+};
+
+// Step-by-step guide component
+const UploadGuide = () => {
+  const { isOpen, onToggle } = useDisclosure();
+
+  return (
+    <Card
+      variant="outline"
+      borderRadius="xl"
+      boxShadow="0 2px 10px 0 rgba(0, 0, 0, 0.05)"
+      mb={6}
+      bg="gradient-to-br from-pink-50 to-purple-50"
+      borderColor="pink.200"
+    >
+      <CardBody>
+        <VStack spacing={4} align="stretch">
+          {/* Header with toggle */}
+          <Flex
+            justify="space-between"
+            align="center"
+            cursor="pointer"
+            onClick={onToggle}
+            p={2}
+            borderRadius="lg"
+            _hover={{ bg: "whiteAlpha.500" }}
+            transition="all 0.2s"
+          >
+            <HStack spacing={3}>
+              <Box
+                p={2}
+                borderRadius="full"
+                bgGradient="linear(to-r, pink.400, purple.500)"
+                color="white"
+              >
+                <Icon as={Heart} boxSize={5} />
+              </Box>
+              <VStack spacing={1} align="start">
+                <Heading size="md" color="gray.700">
+                  Како да ги споделите вашите фотографии?
+                </Heading>
+                <Text fontSize="sm" color="gray.600">
+                  {isOpen
+                    ? "Сокриј упатства"
+                    : "Прикажи чекор-по-чекор упатства"}
+                </Text>
+              </VStack>
+            </HStack>
+            <Icon
+              as={isOpen ? ChevronUp : ChevronDown}
+              boxSize={6}
+              color="gray.500"
+              transition="transform 0.2s"
+            />
+          </Flex>
+
+          {/* Collapsible content */}
+          <Collapse in={isOpen} animateOpacity>
+            <VStack spacing={6} align="stretch" pt={4}>
+              {/* Mobile-optimized steps */}
+              <Box display={{ base: "block", md: "none" }}>
+                <VStack spacing={4} align="stretch">
+                  {[
+                    {
+                      icon: Smartphone,
+                      title: "1. Отворете го телефонот",
+                      description:
+                        "Користете ја камерата за да фотографирате или снимите видео од свадбата",
+                      color: "blue.500",
+                    },
+                    {
+                      icon: Camera,
+                      title: "2. Изберете фотографии/видеа",
+                      description:
+                        "Притиснете на 'Додадете фотографии и видеа' копчето подолу",
+                      color: "green.500",
+                    },
+                    {
+                      icon: User,
+                      title: "3. Внесете го вашето име",
+                      description:
+                        "Опционално - кажете ни кој сте за да знаеме кој ги сподели фотографиите",
+                      color: "purple.500",
+                    },
+                    {
+                      icon: Share,
+                      title: "4. Прикачете ги фотографиите",
+                      description:
+                        "Притиснете 'Прикачи' и почекајте да се завршат. Готово!",
+                      color: "pink.500",
+                    },
+                  ].map((step, index) => (
+                    <HStack key={index} spacing={4} align="start">
+                      <Box
+                        flexShrink={0}
+                        p={3}
+                        borderRadius="full"
+                        bg={`${step.color.split(".")[0]}.100`}
+                        border="2px solid"
+                        borderColor={step.color}
+                      >
+                        <Icon as={step.icon} boxSize={6} color={step.color} />
+                      </Box>
+                      <VStack spacing={1} align="start" flex="1">
+                        <Text fontWeight="bold" color="gray.700" fontSize="sm">
+                          {step.title}
+                        </Text>
+                        <Text fontSize="xs" color="gray.600" lineHeight="1.4">
+                          {step.description}
+                        </Text>
+                      </VStack>
+                    </HStack>
+                  ))}
+                </VStack>
+              </Box>
+
+              {/* Desktop version */}
+              <Box display={{ base: "none", md: "block" }}>
+                <SimpleGrid columns={4} spacing={6}>
+                  {[
+                    {
+                      icon: Smartphone,
+                      title: "Фотографирајте",
+                      description:
+                        "Направете прекрасни фотографии и видеа од свадбата",
+                      color: "blue.500",
+                    },
+                    {
+                      icon: Camera,
+                      title: "Изберете фајлови",
+                      description:
+                        "Притиснете на копчето за да ги изберете вашите фотографии",
+                      color: "green.500",
+                    },
+                    {
+                      icon: User,
+                      title: "Внесете име",
+                      description: "Кажете ни кој сте (опционално)",
+                      color: "purple.500",
+                    },
+                    {
+                      icon: Share,
+                      title: "Споделете",
+                      description: "Прикачете ги и споделете ги со сите",
+                      color: "pink.500",
+                    },
+                  ].map((step, index) => (
+                    <VStack key={index} spacing={3} textAlign="center">
+                      <Box
+                        p={4}
+                        borderRadius="full"
+                        bg={`${step.color.split(".")[0]}.100`}
+                        border="3px solid"
+                        borderColor={step.color}
+                      >
+                        <Icon as={step.icon} boxSize={8} color={step.color} />
+                      </Box>
+                      <VStack spacing={1}>
+                        <Text fontWeight="bold" color="gray.700" fontSize="sm">
+                          {step.title}
+                        </Text>
+                        <Text fontSize="xs" color="gray.600" lineHeight="1.3">
+                          {step.description}
+                        </Text>
+                      </VStack>
+                    </VStack>
+                  ))}
+                </SimpleGrid>
+              </Box>
+
+              {/* Tips section */}
+              <Divider borderColor="pink.200" />
+              <Box
+                bg="white"
+                borderRadius="lg"
+                p={4}
+                border="1px solid"
+                borderColor="pink.200"
+              >
+                <VStack spacing={3} align="stretch">
+                  <HStack spacing={2}>
+                    <Icon as={Heart} color="pink.500" boxSize={4} />
+                    <Text fontWeight="semibold" color="gray.700" fontSize="sm">
+                      Совети за подобри фотографии:
+                    </Text>
+                  </HStack>
+                  <List spacing={2} fontSize="xs" color="gray.600">
+                    <ListItem>
+                      <ListIcon as={Check} color="green.500" boxSize={3} />
+                      Фотографирајте во добра светлина
+                    </ListItem>
+                    <ListItem>
+                      <ListIcon as={Check} color="green.500" boxSize={3} />
+                      Снимајте кандидни моменти и емоции
+                    </ListItem>
+                    <ListItem>
+                      <ListIcon as={Check} color="green.500" boxSize={3} />
+                      Можете да прикачите до 25 фајлови наеднаш
+                    </ListItem>
+                    <ListItem>
+                      <ListIcon as={Check} color="green.500" boxSize={3} />
+                      Поддржани се фотографии и видеа
+                    </ListItem>
+                  </List>
+                </VStack>
+              </Box>
+            </VStack>
+          </Collapse>
+        </VStack>
+      </CardBody>
+    </Card>
   );
 };
 
@@ -459,378 +698,384 @@ export default function PhotoUploader() {
     fileProgress.every((fp) => fp.status === "success");
 
   return (
-    <Card
-      variant="outline"
-      borderRadius="xl"
-      boxShadow="0 4px 15px 0 rgba(0, 0, 0, 0.1)"
-    >
-      <CardBody>
-        <VStack spacing={6} align="stretch">
-          {/* Header */}
-          <Box textAlign="center">
-            <Heading
-              as="h2"
-              size={{ base: "xl", md: "lg" }}
-              bgGradient="linear(to-r, blue.600, purple.600)"
-              bgClip="text"
-              fontWeight="bold"
-              mb={2}
-            >
-              Прикачете ги вашите фотографии и видеа
-            </Heading>
-            <Text fontSize="md" color="gray.600" fontWeight="medium">
-              Споделете ги прекрасните моменти од свадбата
-            </Text>
-          </Box>
+    <VStack spacing={6} align="stretch">
+      {/* Step-by-step guide */}
+      <UploadGuide />
 
-          {/* Name Input */}
-          <FormControl>
-            <FormLabel fontSize="md" fontWeight="semibold" color="gray.700">
-              Вашето име (опционално)
-            </FormLabel>
-            <InputGroup>
-              <InputLeftElement>
-                <Icon as={User} color="gray.400" />
-              </InputLeftElement>
-              <Input
-                placeholder="Внесете го вашето име"
-                value={userName}
-                onChange={(e) => setUserName(e.target.value)}
-                isDisabled={isUploading}
-                size="lg"
-                borderRadius="xl"
-                _focus={{
-                  borderColor: "blue.400",
-                  boxShadow: "0 0 0 1px rgba(59, 130, 246, 0.5)",
-                }}
-              />
-            </InputGroup>
-          </FormControl>
-
-          {/* Mobile-First Upload Buttons */}
-          <VStack spacing={4} align="stretch">
-            {/* Primary Upload Button */}
-            <Button
-              size="lg"
-              height="100px"
-              w="100%"
-              borderRadius="xl"
-              bgGradient="linear(to-r, blue.400, blue.600, purple.500)"
-              color="white"
-              fontWeight="bold"
-              fontSize={{ base: "lg", md: "md" }}
-              boxShadow="0 4px 15px 0 rgba(59, 130, 246, 0.35)"
-              onClick={() => handleFileSelection(true)}
-              isDisabled={isUploading}
-              transition="all 0.3s ease"
-              position="relative"
-              overflow="hidden"
-              _hover={{
-                bgGradient: isUploading
-                  ? "linear(to-r, blue.400, blue.600, purple.500)"
-                  : "linear(to-r, blue.500, blue.700, purple.600)",
-                transform: isUploading ? "none" : "translateY(-2px)",
-                boxShadow: isUploading
-                  ? "0 4px 15px 0 rgba(59, 130, 246, 0.35)"
-                  : "0 8px 25px 0 rgba(59, 130, 246, 0.45)",
-                _before: {
-                  left: "100%",
-                },
-              }}
-              _active={{
-                transform: isUploading ? "none" : "translateY(0px)",
-              }}
-              _before={{
-                content: '""',
-                position: "absolute",
-                top: 0,
-                left: "-100%",
-                width: "100%",
-                height: "100%",
-                background:
-                  "linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)",
-                transition: "left 0.6s",
-              }}
-            >
-              <VStack spacing={1}>
-                <HStack
-                  spacing={3}
-                  alignItems="center"
-                  flexWrap="wrap"
-                  justifyContent="center"
-                >
-                  <Icon as={Upload} boxSize={6} />
-                  <Text>
-                    {isUploading
-                      ? "Се прикачува..."
-                      : isDragActive
-                      ? "Ставете ги вашите свадбени фотографии и видеа тука"
-                      : selectedFiles.length > 0
-                      ? `Додадете уште фотографии`
-                      : "Додадете фотографии и видеа"}
-                  </Text>
-                </HStack>
-              </VStack>
-            </Button>
-
-            {/* Desktop Drag & Drop Area - Secondary on mobile */}
-            <Box
-              {...getRootProps()}
-              display={{ base: "none", md: "block" }}
-              p={6}
-              borderWidth="2px"
-              borderRadius="xl"
-              borderStyle="dashed"
-              borderColor={
-                selectedFiles.length > MAX_FILES
-                  ? "red.300"
-                  : isDragActive
-                  ? "blue.400"
-                  : "gray.300"
-              }
-              bg={
-                selectedFiles.length > MAX_FILES
-                  ? "red.50"
-                  : isDragActive
-                  ? "blue.50"
-                  : "gray.50"
-              }
-              cursor={isUploading ? "not-allowed" : "pointer"}
-              transition="all 0.3s ease"
-              textAlign="center"
-              opacity={isUploading ? 0.6 : 1}
-              _hover={{
-                borderColor: isUploading
-                  ? "gray.300"
-                  : selectedFiles.length > MAX_FILES
-                  ? "red.400"
-                  : "blue.300",
-                bg: isUploading
-                  ? "gray.50"
-                  : selectedFiles.length > MAX_FILES
-                  ? "red.100"
-                  : "blue.25",
-                transform: isUploading ? "none" : "scale(1.01)",
-              }}
-              minH="100px"
-              flexDirection="column"
-              alignItems="center"
-              justifyContent="center"
-              gap={3}
-            >
-              <input {...getInputProps()} disabled={isUploading} />
-              <Icon
-                as={Upload}
-                boxSize={8}
-                color={
-                  selectedFiles.length > MAX_FILES
-                    ? "red.400"
-                    : isDragActive
-                    ? "blue.500"
-                    : "gray.400"
-                }
-                transition="all 0.3s ease"
-              />
-              <VStack spacing={1}>
-                <Text
-                  fontSize="md"
-                  fontWeight="semibold"
-                  color={
-                    selectedFiles.length > MAX_FILES
-                      ? "red.600"
-                      : isUploading
-                      ? "gray.500"
-                      : isDragActive
-                      ? "blue.600"
-                      : "gray.600"
-                  }
-                >
-                  Влечете и ставете фајлови тука
-                </Text>
-                <Text fontSize="sm" color="gray.500">
-                  или користете го копчето погоре
-                </Text>
-              </VStack>
-            </Box>
-          </VStack>
-
-          {/* File counter - show when files are selected */}
-          {selectedFiles.length > 0 && (
-            <Box
-              bg={selectedFiles.length > MAX_FILES ? "red.50" : "blue.50"}
-              borderRadius="xl"
-              p={4}
-              border="1px solid"
-              borderColor={
-                selectedFiles.length > MAX_FILES ? "red.200" : "blue.200"
-              }
-            >
-              <Text
-                fontSize="sm"
-                color={
-                  selectedFiles.length > MAX_FILES ? "red.600" : "blue.600"
-                }
-                textAlign="center"
-                fontWeight="semibold"
+      {/* Main upload card */}
+      <Card
+        variant="outline"
+        borderRadius="xl"
+        boxShadow="0 4px 15px 0 rgba(0, 0, 0, 0.1)"
+      >
+        <CardBody>
+          <VStack spacing={6} align="stretch">
+            {/* Header */}
+            <Box textAlign="center">
+              <Heading
+                as="h2"
+                size={{ base: "xl", md: "lg" }}
+                bgGradient="linear(to-r, blue.600, purple.600)"
+                bgClip="text"
+                fontWeight="bold"
+                mb={2}
               >
-                Избрани се {selectedFiles.length} фајлови
-                {selectedFiles.length > MAX_FILES && (
-                  <Text
-                    as="span"
-                    color="red.600"
-                    fontWeight="bold"
-                    display="block"
-                    mt={1}
-                  >
-                    ⚠️ Отстранете {selectedFiles.length - MAX_FILES} фајлови за
-                    да можете да прикачите!
-                  </Text>
-                )}
+                Прикачете ги вашите фотографии и видеа
+              </Heading>
+              <Text fontSize="md" color="gray.600" fontWeight="medium">
+                Споделете ги прекрасните моменти од свадбата
               </Text>
             </Box>
-          )}
 
-          {/* Upload Action Button */}
-          {selectedFiles.length > 0 && (
-            <Button
-              size="lg"
-              height="60px"
-              w="100%"
-              borderRadius="xl"
-              bgGradient={
-                selectedFiles.length > MAX_FILES
-                  ? "linear(to-r, red.300, red.400)"
-                  : isUploading
-                  ? "linear(to-r, gray.300, gray.400)"
-                  : "linear(to-r, green.400, green.600, teal.500)"
-              }
-              color="white"
-              fontWeight="bold"
-              fontSize="lg"
-              boxShadow={
-                isUploading || selectedFiles.length > MAX_FILES
-                  ? "none"
-                  : "0 4px 15px 0 rgba(34, 197, 94, 0.35)"
-              }
-              _hover={{
-                bgGradient:
+            {/* Name Input */}
+            <FormControl>
+              <FormLabel fontSize="md" fontWeight="semibold" color="gray.700">
+                Вашето име (опционално)
+              </FormLabel>
+              <InputGroup>
+                <InputLeftElement>
+                  <Icon as={User} color="gray.400" />
+                </InputLeftElement>
+                <Input
+                  placeholder="Внесете го вашето име"
+                  value={userName}
+                  onChange={(e) => setUserName(e.target.value)}
+                  isDisabled={isUploading}
+                  size="lg"
+                  borderRadius="xl"
+                  _focus={{
+                    borderColor: "blue.400",
+                    boxShadow: "0 0 0 1px rgba(59, 130, 246, 0.5)",
+                  }}
+                />
+              </InputGroup>
+            </FormControl>
+
+            {/* Mobile-First Upload Buttons */}
+            <VStack spacing={4} align="stretch">
+              {/* Primary Upload Button */}
+              <Button
+                size="lg"
+                height="100px"
+                w="100%"
+                borderRadius="xl"
+                bgGradient="linear(to-r, blue.400, blue.600, purple.500)"
+                color="white"
+                fontWeight="bold"
+                fontSize={{ base: "lg", md: "md" }}
+                boxShadow="0 4px 15px 0 rgba(59, 130, 246, 0.35)"
+                onClick={() => handleFileSelection(true)}
+                isDisabled={isUploading}
+                transition="all 0.3s ease"
+                position="relative"
+                overflow="hidden"
+                _hover={{
+                  bgGradient: isUploading
+                    ? "linear(to-r, blue.400, blue.600, purple.500)"
+                    : "linear(to-r, blue.500, blue.700, purple.600)",
+                  transform: isUploading ? "none" : "translateY(-2px)",
+                  boxShadow: isUploading
+                    ? "0 4px 15px 0 rgba(59, 130, 246, 0.35)"
+                    : "0 8px 25px 0 rgba(59, 130, 246, 0.45)",
+                  _before: {
+                    left: "100%",
+                  },
+                }}
+                _active={{
+                  transform: isUploading ? "none" : "translateY(0px)",
+                }}
+                _before={{
+                  content: '""',
+                  position: "absolute",
+                  top: 0,
+                  left: "-100%",
+                  width: "100%",
+                  height: "100%",
+                  background:
+                    "linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)",
+                  transition: "left 0.6s",
+                }}
+              >
+                <VStack spacing={1}>
+                  <HStack
+                    spacing={3}
+                    alignItems="center"
+                    flexWrap="wrap"
+                    justifyContent="center"
+                  >
+                    <Icon as={Upload} boxSize={6} />
+                    <Text>
+                      {isUploading
+                        ? "Се прикачува..."
+                        : isDragActive
+                        ? "Ставете ги вашите свадбени фотографии и видеа тука"
+                        : selectedFiles.length > 0
+                        ? `Додадете уште фотографии`
+                        : "Додадете фотографии и видеа"}
+                    </Text>
+                  </HStack>
+                </VStack>
+              </Button>
+
+              {/* Desktop Drag & Drop Area - Secondary on mobile */}
+              <Box
+                {...getRootProps()}
+                display={{ base: "none", md: "block" }}
+                p={6}
+                borderWidth="2px"
+                borderRadius="xl"
+                borderStyle="dashed"
+                borderColor={
+                  selectedFiles.length > MAX_FILES
+                    ? "red.300"
+                    : isDragActive
+                    ? "blue.400"
+                    : "gray.300"
+                }
+                bg={
+                  selectedFiles.length > MAX_FILES
+                    ? "red.50"
+                    : isDragActive
+                    ? "blue.50"
+                    : "gray.50"
+                }
+                cursor={isUploading ? "not-allowed" : "pointer"}
+                transition="all 0.3s ease"
+                textAlign="center"
+                opacity={isUploading ? 0.6 : 1}
+                _hover={{
+                  borderColor: isUploading
+                    ? "gray.300"
+                    : selectedFiles.length > MAX_FILES
+                    ? "red.400"
+                    : "blue.300",
+                  bg: isUploading
+                    ? "gray.50"
+                    : selectedFiles.length > MAX_FILES
+                    ? "red.100"
+                    : "blue.25",
+                  transform: isUploading ? "none" : "scale(1.01)",
+                }}
+                minH="100px"
+                flexDirection="column"
+                alignItems="center"
+                justifyContent="center"
+                gap={3}
+              >
+                <input {...getInputProps()} disabled={isUploading} />
+                <Icon
+                  as={Upload}
+                  boxSize={8}
+                  color={
+                    selectedFiles.length > MAX_FILES
+                      ? "red.400"
+                      : isDragActive
+                      ? "blue.500"
+                      : "gray.400"
+                  }
+                  transition="all 0.3s ease"
+                />
+                <VStack spacing={1}>
+                  <Text
+                    fontSize="md"
+                    fontWeight="semibold"
+                    color={
+                      selectedFiles.length > MAX_FILES
+                        ? "red.600"
+                        : isUploading
+                        ? "gray.500"
+                        : isDragActive
+                        ? "blue.600"
+                        : "gray.600"
+                    }
+                  >
+                    Влечете и ставете фајлови тука
+                  </Text>
+                  <Text fontSize="sm" color="gray.500">
+                    или користете го копчето погоре
+                  </Text>
+                </VStack>
+              </Box>
+            </VStack>
+
+            {/* File counter - show when files are selected */}
+            {selectedFiles.length > 0 && (
+              <Box
+                bg={selectedFiles.length > MAX_FILES ? "red.50" : "blue.50"}
+                borderRadius="xl"
+                p={4}
+                border="1px solid"
+                borderColor={
+                  selectedFiles.length > MAX_FILES ? "red.200" : "blue.200"
+                }
+              >
+                <Text
+                  fontSize="sm"
+                  color={
+                    selectedFiles.length > MAX_FILES ? "red.600" : "blue.600"
+                  }
+                  textAlign="center"
+                  fontWeight="semibold"
+                >
+                  Избрани се {selectedFiles.length} фајлови
+                  {selectedFiles.length > MAX_FILES && (
+                    <Text
+                      as="span"
+                      color="red.600"
+                      fontWeight="bold"
+                      display="block"
+                      mt={1}
+                    >
+                      ⚠️ Отстранете {selectedFiles.length - MAX_FILES} фајлови
+                      за да можете да прикачите!
+                    </Text>
+                  )}
+                </Text>
+              </Box>
+            )}
+
+            {/* Upload Action Button */}
+            {selectedFiles.length > 0 && (
+              <Button
+                size="lg"
+                height="60px"
+                w="100%"
+                borderRadius="xl"
+                bgGradient={
                   selectedFiles.length > MAX_FILES
                     ? "linear(to-r, red.300, red.400)"
                     : isUploading
                     ? "linear(to-r, gray.300, gray.400)"
-                    : "linear(to-r, green.500, green.700, teal.600)",
-                transform:
+                    : "linear(to-r, green.400, green.600, teal.500)"
+                }
+                color="white"
+                fontWeight="bold"
+                fontSize="lg"
+                boxShadow={
                   isUploading || selectedFiles.length > MAX_FILES
                     ? "none"
-                    : "translateY(-2px)",
-                boxShadow:
-                  isUploading || selectedFiles.length > MAX_FILES
-                    ? "none"
-                    : "0 8px 25px 0 rgba(34, 197, 94, 0.45)",
-              }}
-              _active={{
-                transform:
-                  isUploading || selectedFiles.length > MAX_FILES
-                    ? "none"
-                    : "translateY(0px)",
-              }}
-              isDisabled={isUploading || selectedFiles.length > MAX_FILES}
-              onClick={handleUpload}
-              isLoading={isUploading}
-              loadingText={`Се прикачува ${overallProgress}%...`}
-              spinnerPlacement="start"
-              transition="all 0.3s ease"
-              position="relative"
-              overflow="hidden"
-            >
-              <Flex align="center" gap={3}>
-                <Icon as={Upload} boxSize={5} />
-                <Text>
-                  {selectedFiles.length > MAX_FILES
-                    ? `Премногу фајлови (${selectedFiles.length}/${MAX_FILES})`
-                    : isUploading
-                    ? `Се прикачува ${overallProgress}%...`
-                    : `Прикачи ${selectedFiles.length} ${
-                        selectedFiles.length === 1 ? "фајл" : "фајлови"
-                      }`}
-                </Text>
-              </Flex>
-            </Button>
-          )}
+                    : "0 4px 15px 0 rgba(34, 197, 94, 0.35)"
+                }
+                _hover={{
+                  bgGradient:
+                    selectedFiles.length > MAX_FILES
+                      ? "linear(to-r, red.300, red.400)"
+                      : isUploading
+                      ? "linear(to-r, gray.300, gray.400)"
+                      : "linear(to-r, green.500, green.700, teal.600)",
+                  transform:
+                    isUploading || selectedFiles.length > MAX_FILES
+                      ? "none"
+                      : "translateY(-2px)",
+                  boxShadow:
+                    isUploading || selectedFiles.length > MAX_FILES
+                      ? "none"
+                      : "0 8px 25px 0 rgba(34, 197, 94, 0.45)",
+                }}
+                _active={{
+                  transform:
+                    isUploading || selectedFiles.length > MAX_FILES
+                      ? "none"
+                      : "translateY(0px)",
+                }}
+                isDisabled={isUploading || selectedFiles.length > MAX_FILES}
+                onClick={handleUpload}
+                isLoading={isUploading}
+                loadingText={`Се прикачува ${overallProgress}%...`}
+                spinnerPlacement="start"
+                transition="all 0.3s ease"
+                position="relative"
+                overflow="hidden"
+              >
+                <Flex align="center" gap={3}>
+                  <Icon as={Upload} boxSize={5} />
+                  <Text>
+                    {selectedFiles.length > MAX_FILES
+                      ? `Премногу фајлови (${selectedFiles.length}/${MAX_FILES})`
+                      : isUploading
+                      ? `Се прикачува ${overallProgress}%...`
+                      : `Прикачи ${selectedFiles.length} ${
+                          selectedFiles.length === 1 ? "фајл" : "фајлови"
+                        }`}
+                  </Text>
+                </Flex>
+              </Button>
+            )}
 
-          {/* File Preview */}
-          {selectedFiles.length > 0 && (
-            <UploadPreview
-              files={selectedFiles}
-              onRemove={removeFile}
-              fileProgress={fileProgress}
-              isUploading={isUploading}
-            />
-          )}
-
-          {/* Overall Progress */}
-          {isUploading && (
-            <Box>
-              <Flex justify="space-between" align="center" mb={2}>
-                <Text fontSize="sm" fontWeight="medium">
-                  Вкупен напредок
-                </Text>
-                <CircularProgress
-                  value={overallProgress}
-                  size="40px"
-                  color="blue.400"
-                >
-                  <CircularProgressLabel fontSize="xs">
-                    {overallProgress}%
-                  </CircularProgressLabel>
-                </CircularProgress>
-              </Flex>
-              <Progress
-                value={overallProgress}
-                colorScheme="blue"
-                borderRadius="md"
+            {/* File Preview */}
+            {selectedFiles.length > 0 && (
+              <UploadPreview
+                files={selectedFiles}
+                onRemove={removeFile}
+                fileProgress={fileProgress}
+                isUploading={isUploading}
               />
+            )}
+
+            {/* Overall Progress */}
+            {isUploading && (
+              <Box>
+                <Flex justify="space-between" align="center" mb={2}>
+                  <Text fontSize="sm" fontWeight="medium">
+                    Вкупен напредок
+                  </Text>
+                  <CircularProgress
+                    value={overallProgress}
+                    size="40px"
+                    color="blue.400"
+                  >
+                    <CircularProgressLabel fontSize="xs">
+                      {overallProgress}%
+                    </CircularProgressLabel>
+                  </CircularProgress>
+                </Flex>
+                <Progress
+                  value={overallProgress}
+                  colorScheme="blue"
+                  borderRadius="md"
+                />
+              </Box>
+            )}
+
+            {/* Success/Error Messages */}
+            {allComplete && (
+              <Alert status="success" borderRadius="md">
+                <AlertIcon />
+                <AlertTitle fontSize="sm">Успешно прикачени!</AlertTitle>
+                <AlertDescription fontSize="sm">
+                  Сите фајлови се успешно прикачени во галеријата.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {hasErrors && (
+              <Alert status="warning" borderRadius="md">
+                <AlertIcon />
+                <AlertTitle fontSize="sm">
+                  Некои прикачувања не успеаја
+                </AlertTitle>
+                <AlertDescription fontSize="sm">
+                  Проверете го статусот на секој фајл погоре. Можете да ги
+                  повторите неуспешните прикачувања.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* File Limit Information */}
+            <Box
+              bg="gray.50"
+              borderRadius="xl"
+              p={4}
+              border="1px solid"
+              borderColor="gray.200"
+            >
+              <Text fontSize="xs" color="gray.600" textAlign="center">
+                💡 Максимум {MAX_FILES} фајлови по прикачување
+              </Text>
             </Box>
-          )}
-
-          {/* Success/Error Messages */}
-          {allComplete && (
-            <Alert status="success" borderRadius="md">
-              <AlertIcon />
-              <AlertTitle fontSize="sm">Успешно прикачени!</AlertTitle>
-              <AlertDescription fontSize="sm">
-                Сите фајлови се успешно прикачени во галеријата.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {hasErrors && (
-            <Alert status="warning" borderRadius="md">
-              <AlertIcon />
-              <AlertTitle fontSize="sm">
-                Некои прикачувања не успеаја
-              </AlertTitle>
-              <AlertDescription fontSize="sm">
-                Проверете го статусот на секој фајл погоре. Можете да ги
-                повторите неуспешните прикачувања.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* File Limit Information */}
-          <Box
-            bg="gray.50"
-            borderRadius="xl"
-            p={4}
-            border="1px solid"
-            borderColor="gray.200"
-          >
-            <Text fontSize="xs" color="gray.600" textAlign="center">
-              💡 Максимум {MAX_FILES} фајлови по прикачување
-            </Text>
-          </Box>
-        </VStack>
-      </CardBody>
-    </Card>
+          </VStack>
+        </CardBody>
+      </Card>
+    </VStack>
   );
 }
