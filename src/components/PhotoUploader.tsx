@@ -53,6 +53,11 @@ import {
   generateVideoThumbnail,
 } from "@/utils/uploadHelpers";
 import { validateFiles, formatFileSize } from "@/utils/fileValidation";
+import {
+  requestWakeLock,
+  releaseWakeLock,
+  isWakeLockActive,
+} from "@/utils/wakeLock";
 
 interface FileProgress {
   name: string;
@@ -368,6 +373,12 @@ const UploadGuide = () => {
                   Спонтани моменти
                 </Text>
               </HStack>
+              <HStack spacing={2}>
+                <Icon as={Check} color="green.500" boxSize={3} />
+                <Text fontSize="xs" color="gray.600">
+                  Не заклучувајте екран
+                </Text>
+              </HStack>
             </HStack>
           </Box>
         </VStack>
@@ -571,6 +582,26 @@ export default function PhotoUploader({
 
     const uploaderName = uploadedBy.trim() || "Anonymous Guest";
 
+    // Request wake lock to prevent phone from sleeping
+    const wakeLockRequested = await requestWakeLock();
+    if (wakeLockRequested) {
+      toast({
+        title: "📱 Екранот ќе остане активен",
+        description: "Телефонот нема да заспие додека се прикачуваат фајловите",
+        status: "info",
+        duration: 3000,
+      });
+    } else {
+      // Show guidance for devices that don't support wake lock
+      toast({
+        title: "💡 Совет за прикачување",
+        description:
+          "За најдобри резултати, задржете го екранот активен додека се прикачуваат фајловите",
+        status: "info",
+        duration: 5000,
+      });
+    }
+
     try {
       setIsUploading(true);
 
@@ -717,6 +748,9 @@ export default function PhotoUploader({
       });
     } finally {
       setIsUploading(false);
+
+      // Release wake lock when upload is complete
+      await releaseWakeLock();
     }
   };
 
@@ -1028,6 +1062,27 @@ export default function PhotoUploader({
                 fileProgress={fileProgress}
                 isUploading={isUploading}
               />
+            )}
+
+            {/* Wake Lock Status */}
+            {isUploading && (
+              <Box
+                bg="blue.50"
+                borderRadius="xl"
+                p={3}
+                border="1px solid"
+                borderColor="blue.200"
+                display="flex"
+                alignItems="center"
+                gap={2}
+              >
+                <Icon as={Smartphone} color="blue.500" boxSize={4} />
+                <Text fontSize="sm" color="blue.700" fontWeight="medium">
+                  {isWakeLockActive()
+                    ? "📱 Екранот е активен - телефонот нема да заспие"
+                    : "💡 Препорачуваме да не го заклучувате екранот"}
+                </Text>
+              </Box>
             )}
 
             {/* Overall Progress */}
