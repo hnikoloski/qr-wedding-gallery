@@ -30,76 +30,45 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const fetchPhotos = async (bypassCache = false) => {
+  const fetchPhotos = async (isManualRefresh = false) => {
     try {
       const currentlyLoading = isLoading || isRefreshing;
       if (!currentlyLoading) {
         setIsRefreshing(true);
       }
 
-      // Clear any stored photos to ensure fresh data from Google Cloud Storage
+      // Clear photos for fresh data - NO CACHE approach
       clearPhotos();
 
-      // ULTRA aggressive cache-busting with multiple layers
+      // Simple cache-busting with timestamp - no excessive headers
       const timestamp = Date.now();
-      const random1 = Math.random().toString(36).substring(7);
-      const random2 = Math.random().toString(36).substring(7);
-      const random3 = Math.random().toString(36).substring(7);
-      const sessionId = crypto.randomUUID();
-
-      // Use POST method to bypass GET-based caches entirely
       const url = `/api/photos`;
 
-      const cacheBustBody = JSON.stringify({
-        timestamp,
-        random1,
-        random2,
-        random3,
-        sessionId,
-        cacheBust: true,
-        bypassCache: true,
-        action: "fetch_photos",
-      });
-
       const response = await fetch(url, {
-        method: "POST", // Use POST to bypass GET-based caches
-        cache: "no-store",
+        method: "POST",
+        cache: "no-store", // Ensure no browser caching
         headers: {
           "Content-Type": "application/json",
-          "Cache-Control":
-            "no-cache, no-store, must-revalidate, max-age=0, private",
-          Pragma: "no-cache",
-          Expires: "-1",
-          "X-Requested-With": "XMLHttpRequest",
-          "X-Cache-Bust": timestamp.toString(),
-          "X-Random-1": random1,
-          "X-Random-2": random2,
-          "X-Random-3": random3,
-          "X-Session-ID": sessionId,
-          "X-Bypass-Cache": "true",
-          "X-Force-Fresh": "true",
-          // Add more cache-busting headers
-          "X-Timestamp": new Date().toISOString(),
-          "X-User-Agent-Hash": btoa(navigator.userAgent).substring(0, 16),
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          "X-Timestamp": timestamp.toString(),
         },
-        body: cacheBustBody,
+        body: JSON.stringify({
+          timestamp,
+          manualRefresh: isManualRefresh,
+          action: "fetch_photos",
+        }),
       });
 
       const data = await response.json();
 
       if (response.ok && data.photos) {
         console.log("Received photos from API:", data.photos.length);
-        console.log("API response timestamp:", data.timestamp);
-        console.log("Fresh data marker:", data._fresh);
 
-        // Photos are already sorted by createdTime desc from the API
         if (data.photos.length > 0) {
           addPhotos(data.photos);
-        } else {
-          console.log("No photos found in Google Cloud Storage");
         }
 
-        if (bypassCache) {
+        if (isManualRefresh) {
           toast({
             title: "Сликите се освежија",
             description: `Има ${data.photos.length} фотографии во галеријата`,
@@ -111,8 +80,8 @@ export default function Home() {
       } else if (!response.ok) {
         console.error("Failed to fetch photos:", data.error);
         toast({
-          title: "Error fetching photos",
-          description: "Could not load photos from Google Cloud Storage",
+          title: "Грешка при вчитување",
+          description: "Не можам да ги вчитам фотографиите од серверот",
           status: "error",
           duration: 5000,
           isClosable: true,
@@ -121,8 +90,8 @@ export default function Home() {
     } catch (error) {
       console.error("Error fetching photos:", error);
       toast({
-        title: "Error refreshing photos",
-        description: "Could not refresh photos from Google Cloud Storage",
+        title: "Грешка при освежување",
+        description: "Не можам да ги освежам фотографиите од серверот",
         status: "error",
         duration: 5000,
         isClosable: true,
@@ -133,13 +102,19 @@ export default function Home() {
     }
   };
 
-  const handleRefresh = () => {
-    fetchPhotos(true); // Bypass cache
+  const handleManualRefresh = () => {
+    fetchPhotos(true); // Manual refresh with user feedback
   };
 
+  const handleUploadComplete = () => {
+    // After upload, refresh gallery to show new photos
+    fetchPhotos(false); // Silent refresh after upload
+  };
+
+  // Only load photos on initial mount - NO auto refresh
   useEffect(() => {
-    fetchPhotos(); // Always bypass cache for immediate updates
-  }, [addPhotos, clearPhotos, toast]);
+    fetchPhotos(false); // Initial load
+  }, []); // Remove dependencies to prevent auto-refresh
 
   return (
     <Container maxW="container.xl" py={8}>
@@ -154,10 +129,10 @@ export default function Home() {
           </Text>
         </Box>
 
-        <PhotoUploader onUploadComplete={() => fetchPhotos(true)} />
+        <PhotoUploader onUploadComplete={handleUploadComplete} />
         <PhotoGallery
           isLoading={isLoading || isRefreshing}
-          onRefresh={handleRefresh}
+          onRefresh={handleManualRefresh}
         />
 
         <Box mt={10} textAlign="center">

@@ -51,6 +51,7 @@ import {
   uploadToGoogleCloudStorage,
   generateVideoThumbnail,
 } from "@/utils/uploadHelpers";
+import { validateFiles, formatFileSize } from "@/utils/fileValidation";
 
 interface FileProgress {
   name: string;
@@ -127,8 +128,7 @@ const UploadPreview = ({
                   {file.name}
                 </Text>
                 <Text fontSize="xs" color="gray.500">
-                  {(file.size / 1024 / 1024).toFixed(2)} MB •{" "}
-                  {isVideo ? "Video" : "Image"}
+                  {formatFileSize(file.size)} • {isVideo ? "Video" : "Image"}
                 </Text>
 
                 {isUploading && progress && (
@@ -383,10 +383,10 @@ export default function PhotoUploader({
   onUploadComplete,
 }: PhotoUploaderProps = {}) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
-  const [userName, setUserName] = useState<string>("");
+  const [uploadedBy, setUploadedBy] = useState<string>("");
+  const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [progress, setProgress] = useState<number>(0);
   const [fileProgress, setFileProgress] = useState<FileProgress[]>([]);
-  const [overallProgress, setOverallProgress] = useState(0);
   const toast = useToast();
   const { addPhotos } = usePhotoStore();
 
@@ -399,6 +399,19 @@ export default function PhotoUploader({
         (file) =>
           file.type.startsWith("image/") || file.type.startsWith("video/")
       );
+
+      // Validate the files
+      const validation = validateFiles(mediaFiles);
+      if (!validation.isValid) {
+        toast({
+          title: "Неважен фајл",
+          description: validation.error,
+          status: "error",
+          duration: 8000,
+          isClosable: true,
+        });
+        return;
+      }
 
       // Show all files in preview, let user decide which to remove
       setSelectedFiles((prev) => [...prev, ...mediaFiles]);
@@ -415,6 +428,20 @@ export default function PhotoUploader({
           duration: 10000,
           isClosable: true,
           position: "top",
+        });
+      }
+
+      // Show file sizes for large files
+      const largeFiles = mediaFiles.filter(
+        (file) => file.size > 100 * 1024 * 1024
+      ); // 100MB+
+      if (largeFiles.length > 0) {
+        toast({
+          title: "Големи фајлови",
+          description: `${largeFiles.length} фајлови се поголеми од 100MB. Прикачувањето може да потрае подолго.`,
+          status: "info",
+          duration: 5000,
+          isClosable: true,
         });
       }
     },
@@ -471,6 +498,19 @@ export default function PhotoUploader({
             (acceptVideo && file.type.startsWith("video/"))
         );
 
+        // Validate the files
+        const validation = validateFiles(mediaFiles);
+        if (!validation.isValid) {
+          toast({
+            title: "Неважен фајл",
+            description: validation.error,
+            status: "error",
+            duration: 8000,
+            isClosable: true,
+          });
+          return;
+        }
+
         // Show all files in preview, let user decide which to remove
         setSelectedFiles((prev) => [...prev, ...mediaFiles]);
 
@@ -488,6 +528,20 @@ export default function PhotoUploader({
             position: "top",
           });
         }
+
+        // Show file sizes for large files
+        const largeFiles = mediaFiles.filter(
+          (file) => file.size > 100 * 1024 * 1024
+        ); // 100MB+
+        if (largeFiles.length > 0) {
+          toast({
+            title: "Големи фајлови",
+            description: `${largeFiles.length} фајлови се поголеми од 100MB. Прикачувањето може да потрае подолго.`,
+            status: "info",
+            duration: 5000,
+            isClosable: true,
+          });
+        }
       }
     };
     input.click();
@@ -496,15 +550,25 @@ export default function PhotoUploader({
   const handleUpload = async () => {
     if (selectedFiles.length === 0) {
       toast({
-        title: "No files selected",
-        description: "Please select files to upload",
+        title: "Нема избрани фајлови",
+        description: "Ве молиме изберете фајлови за прикачување",
         status: "warning",
         duration: 3000,
       });
       return;
     }
 
-    const uploaderName = userName.trim() || "Anonymous Guest";
+    if (selectedFiles.length > MAX_FILES) {
+      toast({
+        title: "Премногу фајлови",
+        description: `Можете да прикачите максимум ${MAX_FILES} фајлови наеднаш`,
+        status: "error",
+        duration: 5000,
+      });
+      return;
+    }
+
+    const uploaderName = uploadedBy.trim() || "Anonymous Guest";
 
     try {
       setIsUploading(true);
@@ -516,20 +580,12 @@ export default function PhotoUploader({
         status: "pending",
       }));
       setFileProgress(initialProgress);
-      setOverallProgress(0);
+      setProgress(0);
 
       const uploadPromises = selectedFiles.map(async (file, index) => {
         try {
           // Update status to uploading
           updateFileProgress(index, { status: "uploading", progress: 10 });
-
-          // Create FormData with file and user information
-          const formData = new FormData();
-          formData.append("file", file);
-          formData.append("userName", uploaderName);
-
-          // Simulate progress updates during upload
-          updateFileProgress(index, { progress: 30 });
 
           // Upload using Google Cloud Storage
           const result = await uploadToGoogleCloudStorage(file, uploaderName);
@@ -609,7 +665,7 @@ export default function PhotoUploader({
         const currentProgress = Math.round(
           ((i + 1) / uploadPromises.length) * 100
         );
-        setOverallProgress(currentProgress);
+        setProgress(currentProgress);
       }
 
       // Filter out failed uploads
@@ -620,8 +676,8 @@ export default function PhotoUploader({
         addPhotos(successfulPhotos);
 
         toast({
-          title: "Upload successful",
-          description: `${successfulPhotos.length} of ${selectedFiles.length} files uploaded successfully`,
+          title: "Успешно прикачување",
+          description: `${successfulPhotos.length} од ${selectedFiles.length} фајлови се успешно прикачени`,
           status:
             successfulPhotos.length === selectedFiles.length
               ? "success"
@@ -633,20 +689,20 @@ export default function PhotoUploader({
         setTimeout(() => {
           setSelectedFiles([]);
           setFileProgress([]);
-          setOverallProgress(0);
+          setProgress(0);
         }, 2000);
 
         if (onUploadComplete) {
           onUploadComplete();
         }
       } else {
-        throw new Error("All uploads failed");
+        throw new Error("Сите прикачувања не успеаја");
       }
     } catch (error) {
       console.error("Upload failed:", error);
       toast({
-        title: "Upload failed",
-        description: "There was an error uploading your files",
+        title: "Грешка при прикачување",
+        description: "Има грешка при прикачување на вашите фајлови",
         status: "error",
         duration: 5000,
       });
@@ -684,8 +740,8 @@ export default function PhotoUploader({
                 </InputLeftElement>
                 <Input
                   placeholder="Внесете го вашето име"
-                  value={userName}
-                  onChange={(e) => setUserName(e.target.value)}
+                  value={uploadedBy}
+                  onChange={(e) => setUploadedBy(e.target.value)}
                   isDisabled={isUploading}
                   size="lg"
                   borderRadius="xl"
@@ -702,19 +758,23 @@ export default function PhotoUploader({
               {/* Primary Upload Button */}
               <Button
                 size="lg"
-                height="100px"
+                minH="100px"
+                maxW="100%"
                 w="100%"
                 borderRadius="xl"
                 bgGradient="linear(to-r, blue.400, blue.600, purple.500)"
                 color="white"
                 fontWeight="bold"
-                fontSize={{ base: "lg", md: "md" }}
+                fontSize={{ base: "md", md: "md" }}
                 boxShadow="0 4px 15px 0 rgba(59, 130, 246, 0.35)"
                 onClick={() => handleFileSelection(true)}
                 isDisabled={isUploading}
                 transition="all 0.3s ease"
                 position="relative"
                 overflow="hidden"
+                whiteSpace="normal"
+                textAlign="center"
+                p={4}
                 _hover={{
                   bgGradient: isUploading
                     ? "linear(to-r, blue.400, blue.600, purple.500)"
@@ -742,24 +802,17 @@ export default function PhotoUploader({
                   transition: "left 0.6s",
                 }}
               >
-                <VStack spacing={1}>
-                  <HStack
-                    spacing={3}
-                    alignItems="center"
-                    flexWrap="wrap"
-                    justifyContent="center"
-                  >
-                    <Icon as={Upload} boxSize={6} />
-                    <Text>
-                      {isUploading
-                        ? "Се прикачува..."
-                        : isDragActive
-                        ? "Ставете ги вашите свадбени фотографии и видеа тука"
-                        : selectedFiles.length > 0
-                        ? `Додадете уште фотографии`
-                        : "Додадете фотографии и видеа"}
-                    </Text>
-                  </HStack>
+                <VStack spacing={2} w="100%">
+                  <Icon as={Upload} boxSize={6} />
+                  <Text textAlign="center" lineHeight="1.3" px={2}>
+                    {isUploading
+                      ? "Се прикачува..."
+                      : isDragActive
+                      ? "Ставете ги вашите свадбени фотографии и видеа тука"
+                      : selectedFiles.length > 0
+                      ? `Додадете уште фотографии`
+                      : "Додадете фотографии и видеа"}
+                  </Text>
                 </VStack>
               </Button>
 
@@ -884,7 +937,8 @@ export default function PhotoUploader({
             {selectedFiles.length > 0 && (
               <Button
                 size="lg"
-                height="80px"
+                minH="80px"
+                maxW="100%"
                 w="100%"
                 borderRadius="xl"
                 bgGradient={
@@ -896,12 +950,15 @@ export default function PhotoUploader({
                 }
                 color="white"
                 fontWeight="bold"
-                fontSize="lg"
+                fontSize="md"
                 boxShadow={
                   isUploading || selectedFiles.length > MAX_FILES
                     ? "none"
                     : "0 4px 15px 0 rgba(34, 197, 94, 0.35)"
                 }
+                whiteSpace="normal"
+                textAlign="center"
+                p={4}
                 _hover={{
                   bgGradient:
                     selectedFiles.length > MAX_FILES
@@ -927,33 +984,30 @@ export default function PhotoUploader({
                 isDisabled={isUploading || selectedFiles.length > MAX_FILES}
                 onClick={handleUpload}
                 isLoading={isUploading}
-                loadingText={`Се прикачува ${overallProgress}%...`}
+                loadingText={`Се прикачува ${progress}%...`}
                 spinnerPlacement="start"
                 transition="all 0.3s ease"
                 position="relative"
                 overflow="hidden"
               >
-                <Flex
-                  align="center"
-                  gap={3}
-                  flexWrap="wrap"
-                  justifyContent="center"
-                >
+                <VStack spacing={2} w="100%">
                   <Icon as={Upload} boxSize={5} />
                   <Text
-                    display={{ base: "block", md: "block" }}
+                    textAlign="center"
+                    lineHeight="1.3"
+                    px={2}
                     fontSize="md"
                     fontWeight="semibold"
                   >
                     {selectedFiles.length > MAX_FILES
                       ? `Премногу фајлови (${selectedFiles.length}/${MAX_FILES})`
                       : isUploading
-                      ? `Се прикачува ${overallProgress}%...`
+                      ? `Се прикачува ${progress}%...`
                       : `Кликни тука за да прикачиш ${selectedFiles.length} ${
                           selectedFiles.length === 1 ? "фајл" : "фајлови"
                         }`}
                   </Text>
-                </Flex>
+                </VStack>
               </Button>
             )}
 
@@ -975,17 +1029,17 @@ export default function PhotoUploader({
                     Вкупен напредок
                   </Text>
                   <CircularProgress
-                    value={overallProgress}
+                    value={progress}
                     size="40px"
                     color="blue.400"
                   >
                     <CircularProgressLabel fontSize="xs">
-                      {overallProgress}%
+                      {progress}%
                     </CircularProgressLabel>
                   </CircularProgress>
                 </Flex>
                 <Progress
-                  value={overallProgress}
+                  value={progress}
                   colorScheme="blue"
                   borderRadius="md"
                 />

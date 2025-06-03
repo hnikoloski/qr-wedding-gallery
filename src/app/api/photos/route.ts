@@ -139,44 +139,19 @@ async function handlePhotosRequest() {
 
     console.log("Found photos and videos:", photos.length);
     
-    // Generate unique response identifiers for cache busting
     const responseId = crypto.randomUUID();
     const nowTimestamp = Date.now();
     
     return NextResponse.json({ 
       photos,
       timestamp: nowTimestamp,
-      responseId,
-      _fresh: true,
-      _generated: new Date().toISOString(),
-      _cacheBust: Math.random().toString(36)
+      count: photos.length,
     }, {
       headers: {
-        // ULTRA aggressive cache prevention - multiple layers
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, private, no-transform',
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
         'Pragma': 'no-cache',
-        'Expires': '-1',
-        'Surrogate-Control': 'no-store',
-        'CDN-Cache-Control': 'no-store',
-        'Cloudflare-CDN-Cache-Control': 'no-store',
-        'Vercel-CDN-Cache-Control': 'no-store',
-        'CF-Cache-Status': 'BYPASS',
-        // Edge and reverse proxy cache control
-        'X-Accel-Expires': '0',
-        'X-Cache-Control': 'no-cache',
-        'X-Edge-Cache': 'no-cache',
-        // Additional headers to prevent any caching
-        'Last-Modified': new Date().toUTCString(),
+        'Expires': '0',
         'ETag': `"${nowTimestamp}-${responseId}"`,
-        'Vary': '*',
-        // Custom cache-busting headers
-        'X-Response-ID': responseId,
-        'X-Generated-At': new Date().toISOString(),
-        'X-Cache-Bust': Math.random().toString(36),
-        'X-Unique-Response': `${nowTimestamp}-${Math.random()}`,
-        // CORS headers to prevent preflight caching
-        'Access-Control-Max-Age': '0',
-        'Access-Control-Cache-Control': 'no-cache',
       },
     });
   } catch (error) {
@@ -187,7 +162,6 @@ async function handlePhotosRequest() {
         status: 500,
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'X-Error-Time': new Date().toISOString(),
         },
       }
     );

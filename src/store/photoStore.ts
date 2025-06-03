@@ -22,6 +22,7 @@ interface PhotoStore {
   removePhoto: (index: number) => void;
   clearPhotos: () => void;
   getPhotoUrls: () => string[];
+  updatePhoto: (photoId: string, updatedPhoto: Photo) => void; // Update a specific photo
   markVideoAsProcessed: (videoId: string) => void; // Mark video as processed by Google Drive
   clearStaleBlobUrls: () => void; // Clear stale blob URLs after page refresh
   clearOldBlobUrls: (maxAgeMinutes?: number) => void; // Clear blob URLs older than specified time
@@ -76,6 +77,12 @@ export const usePhotoStore = create<PhotoStore>()(
         })),
       clearPhotos: () => set({ photos: [] }),
     getPhotoUrls: () => get().photos.map(photo => photo.url),
+    updatePhoto: (photoId: string, updatedPhoto: Photo) =>
+      set((state) => ({
+        photos: state.photos.map(photo =>
+          photo.id === photoId ? updatedPhoto : photo
+        ),
+      })),
     markVideoAsProcessed: (videoId: string) =>
       set((state) => ({
         photos: state.photos.map(photo =>

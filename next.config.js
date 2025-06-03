@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    // McMaster-style performance optimizations
+    // Performance optimizations
     compress: true,
     poweredByHeader: false,
 
@@ -28,10 +28,12 @@ const nextConfig = {
 
     // Compiler optimizations
     compiler: {
-        removeConsole: process.env.NODE_ENV === 'production',
+        removeConsole: process.env.NODE_ENV === 'production' ? {
+            exclude: ['error', 'warn']
+        } : false,
     },
 
-    // Headers for better caching
+    // Headers for security and performance
     async headers() {
         return [
             {
@@ -48,6 +50,10 @@ const nextConfig = {
                     {
                         key: 'Referrer-Policy',
                         value: 'origin-when-cross-origin',
+                    },
+                    {
+                        key: 'X-DNS-Prefetch-Control',
+                        value: 'on',
                     },
                 ],
             },

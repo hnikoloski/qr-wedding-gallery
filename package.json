@@ -17,6 +17,7 @@
     "@emotion/react": "^11.11.4",
     "@emotion/styled": "^11.11.0",
     "@tailwindcss/postcss": "^4.1.5",
+    "@types/video.js": "^7.3.58",
     "autoprefixer": "^10.4.21",
     "framer-motion": "^11.0.20",
     "googleapis": "^133.0.0",
@@ -29,6 +30,7 @@
     "react-dropzone": "^14.2.3",
     "sharp": "^0.34.2",
     "tailwindcss": "^4.1.5",
+    "video.js": "^8.22.0",
     "yet-another-react-lightbox": "^3.23.2",
     "zustand": "^4.5.2"
   },

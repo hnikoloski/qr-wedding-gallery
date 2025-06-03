@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Box,
   Card,
@@ -34,7 +34,12 @@ import Video from "yet-another-react-lightbox/plugins/video";
 import Image from "next/image";
 import { Upload } from "lucide-react";
 import { Icon } from "@chakra-ui/react";
-import { generateVideoThumbnail } from "@/utils/uploadHelpers";
+import {
+  uploadToGoogleCloudStorage,
+  generateVideoThumbnail,
+  generateVideoThumbnailFromUrl,
+} from "@/utils/uploadHelpers";
+import VideoPlayer, { VideoPlayerMethods } from "./VideoPlayer";
 
 interface PhotoGalleryProps {
   isLoading?: boolean;
@@ -47,12 +52,16 @@ export default function PhotoGallery({
   isLoading = false,
   onRefresh,
 }: PhotoGalleryProps) {
-  const { photos, clearStaleBlobUrls } = usePhotoStore();
+  const { photos, clearStaleBlobUrls, updatePhoto } = usePhotoStore();
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [photoIndex, setPhotoIndex] = useState(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [displayedPhotos, setDisplayedPhotos] = useState<string[]>([]);
+
+  // Track all video player instances for proper cleanup
+  const videoPlayersRef = useRef<Map<string, VideoPlayerMethods>>(new Map());
+  const activeVideoRef = useRef<VideoPlayerMethods | null>(null);
 
   // Clear stale blob URLs on component mount (they don't persist across page refreshes)
   useEffect(() => {
@@ -101,7 +110,73 @@ export default function PhotoGallery({
     setDisplayedPhotos(photoUrls.slice(startIndex, endIndex));
   }, [photoUrls, currentPage]);
 
+  // Generate thumbnails for videos that don't have them
+  useEffect(() => {
+    const generateMissingThumbnails = async () => {
+      const videosNeedingThumbnails = photos.filter(
+        (photo) =>
+          photo.mimeType?.startsWith("video/") &&
+          !photo.thumbnailUrl &&
+          photo.needsThumbnail
+      );
+
+      for (const video of videosNeedingThumbnails) {
+        try {
+          console.log("Generating thumbnail for video:", video.name);
+          const thumbnail = await generateVideoThumbnailFromUrl(video.url);
+
+          // Update the photo in the store with the generated thumbnail
+          updatePhoto(video.id, {
+            ...video,
+            thumbnailUrl: thumbnail,
+            needsThumbnail: false,
+          });
+
+          console.log("Generated thumbnail for video:", video.name);
+        } catch (error) {
+          console.warn(
+            "Failed to generate thumbnail for video:",
+            video.name,
+            error
+          );
+
+          // Set a fallback thumbnail so we don't keep trying
+          const fallbackThumbnail = `data:image/svg+xml;base64,${btoa(`
+            <svg width="120" height="80" viewBox="0 0 120 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="120" height="80" fill="#2D3748" rx="8"/>
+              <circle cx="60" cy="40" r="16" fill="#4A5568"/>
+              <polygon points="55,32 55,48 70,40" fill="#E2E8F0"/>
+              <text x="60" y="65" font-family="Arial, sans-serif" font-size="8" fill="#A0ADB8" text-anchor="middle">VIDEO</text>
+            </svg>
+          `)}`;
+
+          updatePhoto(video.id, {
+            ...video,
+            thumbnailUrl: fallbackThumbnail,
+            needsThumbnail: false,
+          });
+        }
+      }
+    };
+
+    // Only generate thumbnails if we have videos needing them and not currently loading
+    if (
+      !isLoading &&
+      photos.some(
+        (photo) =>
+          photo.mimeType?.startsWith("video/") &&
+          !photo.thumbnailUrl &&
+          photo.needsThumbnail
+      )
+    ) {
+      generateMissingThumbnails();
+    }
+  }, [photos, isLoading, updatePhoto]);
+
   const openLightbox = (photoUrl: string) => {
+    // Pause any currently playing videos before opening lightbox
+    pauseAllVideos();
+
     const index = photoUrls.indexOf(photoUrl);
     setPhotoIndex(index);
     setLightboxOpen(true);
@@ -110,17 +185,56 @@ export default function PhotoGallery({
   const closeLightbox = () => {
     // Pause all videos when closing lightbox
     pauseAllVideos();
+
+    // Dispose all video players to free memory
+    videoPlayersRef.current.forEach((player) => {
+      try {
+        player.dispose();
+      } catch (error) {
+        // Ignore disposal errors
+      }
+    });
+    videoPlayersRef.current.clear();
+
     setLightboxOpen(false);
   };
+
+  // Cleanup effect for component unmount
+  useEffect(() => {
+    return () => {
+      // Cleanup all video players on component unmount
+      videoPlayersRef.current.forEach((player) => {
+        try {
+          player.dispose();
+        } catch (error) {
+          // Ignore disposal errors
+        }
+      });
+      videoPlayersRef.current.clear();
+    };
+  }, []);
 
   const handleSlideChange = (index: number) => {
     // Pause all videos when changing slides
     pauseAllVideos();
-    setPhotoIndex(index);
+
+    // Small delay to ensure videos are paused before changing
+    setTimeout(() => {
+      setPhotoIndex(index);
+    }, 100);
   };
 
   const pauseAllVideos = () => {
-    // Pause all video elements in the page
+    // Pause all Video.js players
+    videoPlayersRef.current.forEach((player) => {
+      try {
+        player.pause();
+      } catch (error) {
+        // Ignore disposal errors
+      }
+    });
+
+    // Also pause any remaining HTML5 video elements as fallback
     const videos = document.querySelectorAll("video");
     videos.forEach((video) => {
       if (!video.paused) {
@@ -128,17 +242,22 @@ export default function PhotoGallery({
       }
     });
 
-    // Also try to pause videos in iframes (though this may not work due to cross-origin restrictions)
+    // Clear active video reference
+    activeVideoRef.current = null;
+
+    // Legacy iframe handling (still useful for any Google Drive embeds)
     const iframes = document.querySelectorAll("iframe");
     iframes.forEach((iframe) => {
       try {
-        // This will only work for same-origin iframes
-        iframe.contentWindow?.postMessage(
-          '{"event":"command","func":"pauseVideo","args":""}',
-          "*"
-        );
+        if (iframe.src && iframe.src.includes("drive.google.com")) {
+          const currentSrc = iframe.src;
+          const url = new URL(currentSrc);
+          url.searchParams.delete("autoplay");
+          url.searchParams.set("autoplay", "0");
+          iframe.src = url.toString();
+        }
       } catch (e) {
-        // Silently ignore cross-origin errors
+        // Silently ignore any errors
       }
     });
   };
@@ -939,6 +1058,14 @@ export default function PhotoGallery({
           index={photoIndex}
           on={{
             view: ({ index }: { index: number }) => handleSlideChange(index),
+            entering: () => {
+              // Ensure all videos are paused when entering a slide
+              setTimeout(() => pauseAllVideos(), 50);
+            },
+            exiting: () => {
+              // Pause all videos when exiting
+              pauseAllVideos();
+            },
           }}
           plugins={[Thumbnails, Fullscreen, Slideshow, Zoom, Video]}
           render={{
@@ -947,6 +1074,7 @@ export default function PhotoGallery({
                 const photoObject = photos.find(
                   (p) => p.url === (slide as any).src
                 );
+                const videoId = `video-${photoObject?.id || Date.now()}`;
 
                 // Use blob URL for immediate playback if available and still processing
                 if (photoObject?.tempBlobUrl && photoObject?.isProcessing) {
@@ -961,23 +1089,48 @@ export default function PhotoGallery({
                         backgroundColor: "#000",
                       }}
                     >
-                      <video
-                        src={photoObject.tempBlobUrl}
-                        style={{
-                          maxWidth: "100%",
-                          maxHeight: "100%",
-                          width: "auto",
-                          height: "auto",
+                      <VideoPlayer
+                        ref={(ref) => {
+                          if (ref) {
+                            videoPlayersRef.current.set(videoId, ref);
+                          } else {
+                            videoPlayersRef.current.delete(videoId);
+                          }
                         }}
-                        controls
-                        autoPlay={false}
-                        preload="metadata"
+                        src={photoObject.tempBlobUrl}
+                        poster={photoObject.thumbnailUrl || undefined}
+                        autoplay={false}
+                        muted={false}
+                        controls={true}
+                        fluid={true}
+                        onPlay={() => {
+                          // Pause all other videos when this one starts playing
+                          activeVideoRef.current =
+                            videoPlayersRef.current.get(videoId) || null;
+                          videoPlayersRef.current.forEach((player, id) => {
+                            if (id !== videoId) {
+                              try {
+                                player.pause();
+                              } catch (error) {
+                                // Ignore disposal errors
+                              }
+                            }
+                          });
+                        }}
+                        onPause={() => {
+                          if (
+                            activeVideoRef.current ===
+                            videoPlayersRef.current.get(videoId)
+                          ) {
+                            activeVideoRef.current = null;
+                          }
+                        }}
                       />
                     </div>
                   );
                 }
 
-                // Use Google Drive iframe for processed videos
+                // Use Google Cloud Storage direct URL
                 return (
                   <div
                     style={{
@@ -989,17 +1142,42 @@ export default function PhotoGallery({
                       backgroundColor: "#000",
                     }}
                   >
-                    <iframe
-                      src={(slide as any).src}
-                      style={{
-                        width: "90%",
-                        height: "90%",
-                        border: "none",
-                        borderRadius: "8px",
+                    <VideoPlayer
+                      ref={(ref) => {
+                        if (ref) {
+                          videoPlayersRef.current.set(videoId, ref);
+                        } else {
+                          videoPlayersRef.current.delete(videoId);
+                        }
                       }}
-                      allow="autoplay; encrypted-media; fullscreen"
-                      allowFullScreen
-                      title={(slide as any).alt}
+                      src={(slide as any).src}
+                      poster={photoObject?.thumbnailUrl || undefined}
+                      autoplay={false}
+                      muted={false}
+                      controls={true}
+                      fluid={true}
+                      onPlay={() => {
+                        // Pause all other videos when this one starts playing
+                        activeVideoRef.current =
+                          videoPlayersRef.current.get(videoId) || null;
+                        videoPlayersRef.current.forEach((player, id) => {
+                          if (id !== videoId) {
+                            try {
+                              player.pause();
+                            } catch (error) {
+                              // Ignore disposal errors
+                            }
+                          }
+                        });
+                      }}
+                      onPause={() => {
+                        if (
+                          activeVideoRef.current ===
+                          videoPlayersRef.current.get(videoId)
+                        ) {
+                          activeVideoRef.current = null;
+                        }
+                      }}
                     />
                   </div>
                 );
@@ -1010,6 +1188,8 @@ export default function PhotoGallery({
           video={{
             controls: true,
             playsInline: true,
+            autoPlay: false,
+            muted: false,
           }}
           thumbnails={{
             position: "bottom",

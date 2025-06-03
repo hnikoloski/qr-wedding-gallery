@@ -41,6 +41,57 @@ export function generateVideoThumbnail(file: File): Promise<string> {
 }
 
 /**
+ * Generate a thumbnail for a video from a URL (for existing videos)
+ */
+export function generateVideoThumbnailFromUrl(videoUrl: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video');
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    video.onloadedmetadata = () => {
+      // Set canvas size to 16:9 aspect ratio, max 400px wide
+      const aspectRatio = video.videoHeight / video.videoWidth;
+      canvas.width = Math.min(400, video.videoWidth);
+      canvas.height = canvas.width * aspectRatio;
+
+      // Seek to 2 seconds or 5% of video duration for a good frame
+      video.currentTime = Math.min(2, video.duration * 0.05);
+    };
+
+    video.onseeked = () => {
+      try {
+        // Draw video frame to canvas
+        ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Convert to base64 with good quality
+        const thumbnail = canvas.toDataURL('image/jpeg', 0.8);
+        resolve(thumbnail);
+      } catch (canvasError) {
+        console.warn('Canvas drawing failed (likely CORS):', canvasError);
+        reject(new Error('Canvas access blocked by CORS'));
+      } finally {
+        // Cleanup
+        video.src = '';
+        video.remove();
+      }
+    };
+
+    video.onerror = (error) => {
+      console.warn('Video loading failed (likely CORS):', error);
+      reject(new Error('Video access blocked by CORS policy'));
+    };
+
+    // Configure video element
+    video.crossOrigin = 'anonymous'; // Try with CORS first
+    video.preload = 'metadata';
+    video.muted = true; // Muted for autoplay policies
+    video.src = videoUrl;
+    video.load();
+  });
+}
+
+/**
  * Uploads a file to Google Cloud Storage via API route
  * 
  * @param file The file to upload
