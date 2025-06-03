@@ -226,43 +226,14 @@ export async function uploadToGoogleCloudStorageDirect(
 }
 
 /**
- * Smart upload function that chooses the best method based on file size
+ * Smart upload function that uses direct upload for all files (bypasses Vercel completely)
  */
 export async function uploadToGoogleCloudStorageSmart(
   file: File,
   userName: string,
   onProgress?: (progress: number) => void
 ): Promise<{ success: boolean; photo?: any; error?: string }> {
-  const maxVercelSize = 100 * 1024 * 1024; // 100MB - conservative limit for Vercel
-
-  if (file.size > maxVercelSize) {
-    console.log(`Large file detected (${Math.round(file.size / 1024 / 1024)}MB), using direct upload`);
-    return uploadToGoogleCloudStorageDirect(file, userName, onProgress);
-  } else {
-    console.log(`Normal file size (${Math.round(file.size / 1024 / 1024)}MB), using standard upload`);
-    // For smaller files, use the existing upload method
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('userName', userName);
-
-    try {
-      const response = await fetch('/api/upload-cloud', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error('Upload failed');
-      }
-
-      const result = await response.json();
-      return result;
-    } catch (error) {
-      console.error('Standard upload error:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Upload failed',
-      };
-    }
-  }
+  // Always use direct upload - no need to route anything through Vercel!
+  console.log(`Uploading file directly to Google Cloud Storage (${Math.round(file.size / 1024 / 1024)}MB)`);
+  return uploadToGoogleCloudStorageDirect(file, userName, onProgress);
 } 
