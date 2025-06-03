@@ -145,7 +145,7 @@ export default function Home() {
     <Container maxW="container.xl" py={8}>
       <PerformanceMonitor />
       <VStack spacing={8} align="stretch">
-        <Box textAlign="center" py={6}>
+        <Box textAlign="center">
           <Heading as="h1" size="2xl" mb={2}>
             Тамара & Христијан
           </Heading>
