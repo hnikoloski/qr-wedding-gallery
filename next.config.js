@@ -4,6 +4,14 @@ const nextConfig = {
     compress: true,
     poweredByHeader: false,
 
+    // API configuration for larger uploads
+    api: {
+        bodyParser: {
+            sizeLimit: '500mb',
+        },
+        responseLimit: '500mb',
+    },
+
     // Image optimization
     images: {
         formats: ['image/webp', 'image/avif'],

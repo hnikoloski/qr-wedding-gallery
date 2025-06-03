@@ -49,3 +49,6 @@ wedding-storage-key.json
 google-cloud-key.json
 service-account.json
 gcp-*.json
+
+# Deployment guides with sensitive info
+VERCEL_DEPLOY.md

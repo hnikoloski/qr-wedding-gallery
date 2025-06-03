@@ -2,10 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 
 export async function POST(request: NextRequest) {
-  const startTime = Date.now();
-  
   try {
-    console.log('Upload request received at:', new Date().toISOString());
+    console.log('Signed URL request received');
     
     // Check if we have the required environment variables
     const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
@@ -24,8 +22,6 @@ export async function POST(request: NextRequest) {
 
     // Check if we're in production with environment variable credentials
     if (credentials) {
-      // Production: Use credentials from environment variable
-      console.log('Using credentials from environment variable');
       try {
         credentialsObj = JSON.parse(credentials);
       } catch (parseError) {
@@ -41,76 +37,35 @@ export async function POST(request: NextRequest) {
       let keyPath;
       
       if (keyFilePath) {
-        // Use path from environment variable
         keyPath = path.isAbsolute(keyFilePath) ? keyFilePath : path.join(process.cwd(), keyFilePath);
-        console.log('Using credentials file path from environment variable:', keyPath);
       } else {
-        // Fallback to default path
         keyPath = path.join(process.cwd(), 'wedding-storage-key.json');
-        console.log('Using default credentials file path:', keyPath);
       }
       
       try {
         const fs = require('fs');
         const keyFile = fs.readFileSync(keyPath, 'utf8');
         credentialsObj = JSON.parse(keyFile);
-        console.log('Successfully loaded credentials from:', keyPath);
       } catch (fileError) {
         console.error('Failed to load credentials file:', fileError);
         return NextResponse.json(
-          { success: false, error: "Could not load credentials. Please ensure the key file exists or set GOOGLE_CLOUD_CREDENTIALS environment variable." },
+          { success: false, error: "Could not load credentials" },
           { status: 500 }
         );
       }
     }
 
-    const formData = await request.formData();
-    const file = formData.get("file") as File;
-    const userName = formData.get("userName") as string;
+    const body = await request.json();
+    const { fileName, fileType, fileSize, userName } = body;
 
-    console.log('File received:', file?.name, 'Size:', file?.size);
-    console.log('User name:', userName);
-
-    if (!file) {
-      return NextResponse.json(
-        { success: false, error: "No file provided" },
-        { status: 400 }
-      );
-    }
-
-    // Check file size for Vercel limits
-    const maxFileSize = 500 * 1024 * 1024; // 500MB limit for 4K videos
-    if (file.size > maxFileSize) {
-      console.error(`File too large: ${file.size} bytes (max: ${maxFileSize})`);
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: `File size (${Math.round(file.size / 1024 / 1024)}MB) exceeds maximum allowed size (500MB). Please compress your video or try a smaller file.` 
-        },
-        { status: 413 }
-      );
-    }
+    console.log('File info:', { fileName, fileType, fileSize, userName });
 
     // Generate unique file name
     const timestamp = Date.now();
-    const sanitizedUserName = userName.replace(/[^a-zA-Z0-9]/g, "_") || "Anonymous";
-    const fileExtension = file.name.split(".").pop();
-    const fileName = `${timestamp}_${sanitizedUserName}_${file.name}`;
+    const sanitizedUserName = userName?.replace(/[^a-zA-Z0-9]/g, "_") || "Anonymous";
+    const uniqueFileName = `${timestamp}_${sanitizedUserName}_${fileName}`;
 
-    console.log('Generated file name:', fileName);
-
-    // Convert File to ArrayBuffer with timeout protection (longer for large files)
-    console.log('Converting file to buffer...');
-    const arrayBuffer = await Promise.race([
-      file.arrayBuffer(),
-      new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error('File conversion timeout')), 120000)
-      )
-    ]) as ArrayBuffer;
-    
-    console.log('File converted to buffer, size:', arrayBuffer.byteLength);
-    const elapsedTime = Date.now() - startTime;
-    console.log('Time elapsed so far:', elapsedTime, 'ms');
+    console.log('Generated unique file name:', uniqueFileName);
 
     // Create JWT token for Google Cloud Storage
     const now = Math.floor(Date.now() / 1000);
@@ -141,75 +96,49 @@ export async function POST(request: NextRequest) {
     const tokenData = await tokenResponse.json();
     const accessToken = tokenData.access_token;
 
-    console.log('Got access token, uploading to Google Cloud Storage...');
+    // Generate signed URL for direct upload
+    const signedUrl = `https://storage.googleapis.com/upload/storage/v1/b/${bucketName}/o?uploadType=media&name=${encodeURIComponent(uniqueFileName)}`;
 
-    // Upload to Google Cloud Storage using REST API
-    const uploadUrl = `https://storage.googleapis.com/upload/storage/v1/b/${bucketName}/o?uploadType=media&name=${encodeURIComponent(fileName)}`;
-    
-    const uploadResponse = await fetch(uploadUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': file.type,
-        'x-goog-meta-uploaded-by': userName,
-        'x-goog-meta-uploaded-at': new Date().toISOString(),
-        'x-goog-meta-original-name': file.name,
-      },
-      body: arrayBuffer,
-    });
-
-    if (!uploadResponse.ok) {
-      const errorText = await uploadResponse.text();
-      console.error('Upload failed:', uploadResponse.status, errorText);
-      throw new Error(`Upload failed: ${uploadResponse.statusText}`);
-    }
-
-    const uploadResult = await uploadResponse.json();
-    console.log('File uploaded successfully:', uploadResult.name);
-
-    // Generate public URL
-    const publicUrl = `https://storage.googleapis.com/${bucketName}/${fileName}`;
+    // Generate public URL for the file (once uploaded)
+    const publicUrl = `https://storage.googleapis.com/${bucketName}/${uniqueFileName}`;
 
     // For videos, we'll let the client generate thumbnails
-    // For images, use the same URL for thumbnail
-    const isVideo = file.type.startsWith('video/');
+    const isVideo = fileType.startsWith('video/');
     
     // Create photo object
     const photoObject = {
-      id: fileName,
-      name: file.name,
-      mimeType: file.type,
+      id: uniqueFileName,
+      name: fileName,
+      mimeType: fileType,
       createdTime: new Date().toISOString(),
       url: publicUrl,
       thumbnailUrl: isVideo ? null : publicUrl,
-      uploadedBy: userName,
+      uploadedBy: userName || 'Anonymous',
       needsThumbnail: isVideo,
     };
 
-    console.log('Returning success response');
+    console.log('Returning signed URL response');
     return NextResponse.json({
       success: true,
+      signedUrl,
+      accessToken,
       photo: photoObject,
-      fileId: fileName,
+      fileId: uniqueFileName,
     });
 
   } catch (error) {
-    console.error("Upload error:", error);
-    console.error("Error details:", {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
-    });
+    console.error("Signed URL generation error:", error);
     return NextResponse.json(
       { 
         success: false, 
-        error: error instanceof Error ? error.message : "Upload failed" 
+        error: error instanceof Error ? error.message : "Failed to generate signed URL" 
       },
       { status: 500 }
     );
   }
 }
 
-// Helper function to create JWT token
+// Helper function to create JWT token (reused from upload-cloud)
 async function createJWT(payload: any, privateKey: string): Promise<string> {
   const header = {
     alg: 'RS256',

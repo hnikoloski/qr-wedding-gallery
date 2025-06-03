@@ -133,4 +133,136 @@ export async function uploadToGoogleCloudStorage(
       error: error instanceof Error ? error.message : "Upload failed",
     };
   }
+}
+
+/**
+ * Upload file directly to Google Cloud Storage using signed URL (bypasses Vercel limits)
+ */
+export async function uploadToGoogleCloudStorageDirect(
+  file: File,
+  userName: string,
+  onProgress?: (progress: number) => void
+): Promise<{ success: boolean; photo?: any; error?: string }> {
+  try {
+    console.log('Starting direct upload for file:', file.name, 'Size:', file.size);
+
+    // Step 1: Get signed URL from our API
+    const signedUrlResponse = await fetch('/api/upload-signed-url', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+        userName: userName,
+      }),
+    });
+
+    if (!signedUrlResponse.ok) {
+      const errorData = await signedUrlResponse.json();
+      throw new Error(errorData.error || 'Failed to get signed URL');
+    }
+
+    const { signedUrl, accessToken, photo } = await signedUrlResponse.json();
+    console.log('Got signed URL, uploading directly to Google Cloud Storage...');
+
+    // Step 2: Upload directly to Google Cloud Storage with progress tracking
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+
+      // Track upload progress
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable && onProgress) {
+          const progress = (event.loaded / event.total) * 100;
+          onProgress(progress);
+        }
+      });
+
+      xhr.addEventListener('load', () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          console.log('Direct upload successful');
+          resolve({
+            success: true,
+            photo: photo,
+          });
+        } else {
+          console.error('Direct upload failed:', xhr.status, xhr.statusText);
+          reject(new Error(`Upload failed: ${xhr.statusText}`));
+        }
+      });
+
+      xhr.addEventListener('error', () => {
+        console.error('Direct upload error');
+        reject(new Error('Upload failed'));
+      });
+
+      xhr.addEventListener('timeout', () => {
+        console.error('Direct upload timeout');
+        reject(new Error('Upload timeout'));
+      });
+
+      // Set timeout for very large files (20 minutes)
+      xhr.timeout = 20 * 60 * 1000;
+
+      xhr.open('POST', signedUrl);
+      xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
+      xhr.setRequestHeader('Content-Type', file.type);
+      xhr.setRequestHeader('x-goog-meta-uploaded-by', userName);
+      xhr.setRequestHeader('x-goog-meta-uploaded-at', new Date().toISOString());
+      xhr.setRequestHeader('x-goog-meta-original-name', file.name);
+
+      xhr.send(file);
+    });
+
+  } catch (error) {
+    console.error('Direct upload error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Upload failed',
+    };
+  }
+}
+
+/**
+ * Smart upload function that chooses the best method based on file size
+ */
+export async function uploadToGoogleCloudStorageSmart(
+  file: File,
+  userName: string,
+  onProgress?: (progress: number) => void
+): Promise<{ success: boolean; photo?: any; error?: string }> {
+  const maxVercelSize = 100 * 1024 * 1024; // 100MB - conservative limit for Vercel
+
+  if (file.size > maxVercelSize) {
+    console.log(`Large file detected (${Math.round(file.size / 1024 / 1024)}MB), using direct upload`);
+    return uploadToGoogleCloudStorageDirect(file, userName, onProgress);
+  } else {
+    console.log(`Normal file size (${Math.round(file.size / 1024 / 1024)}MB), using standard upload`);
+    // For smaller files, use the existing upload method
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('userName', userName);
+
+    try {
+      const response = await fetch('/api/upload-cloud', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error('Standard upload error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Upload failed',
+      };
+    }
+  }
 } 

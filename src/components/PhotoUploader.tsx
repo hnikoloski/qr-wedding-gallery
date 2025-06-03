@@ -49,6 +49,7 @@ import {
 import { usePhotoStore } from "@/store/photoStore";
 import {
   uploadToGoogleCloudStorage,
+  uploadToGoogleCloudStorageSmart,
   generateVideoThumbnail,
 } from "@/utils/uploadHelpers";
 import { validateFiles, formatFileSize } from "@/utils/fileValidation";
@@ -587,10 +588,17 @@ export default function PhotoUploader({
           // Update status to uploading
           updateFileProgress(index, { status: "uploading", progress: 10 });
 
-          // Upload using Google Cloud Storage
-          const result = await uploadToGoogleCloudStorage(file, uploaderName);
-
-          updateFileProgress(index, { progress: 70 });
+          // Upload using smart method (chooses direct or standard based on file size)
+          const result = await uploadToGoogleCloudStorageSmart(
+            file,
+            uploaderName,
+            (progress) => {
+              // Update progress from upload
+              updateFileProgress(index, {
+                progress: Math.round(10 + progress * 0.6),
+              });
+            }
+          );
 
           if (!result.success || !result.photo) {
             throw new Error(result.error || `Failed to upload ${file.name}`);
@@ -633,9 +641,10 @@ export default function PhotoUploader({
                 needsThumbnail: false,
               };
             }
+            updateFileProgress(index, { progress: 95 });
+          } else {
+            updateFileProgress(index, { progress: 90 });
           }
-
-          updateFileProgress(index, { progress: 95 });
 
           // Complete
           updateFileProgress(index, { progress: 100, status: "success" });
