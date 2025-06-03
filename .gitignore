@@ -52,3 +52,4 @@ gcp-*.json
 
 # Deployment guides with sensitive info
 VERCEL_DEPLOY.md
+.vercel

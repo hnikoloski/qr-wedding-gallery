@@ -1,15 +1,10 @@
 {
     "functions": {
-        "src/app/api/upload-cloud/route.ts": {
-            "maxDuration": 300
+        "src/app/api/upload-signed-url/route.ts": {
+            "maxDuration": 30
         },
         "src/app/api/photos/route.ts": {
             "maxDuration": 60
-        }
-    },
-    "api": {
-        "bodyParser": {
-            "sizeLimit": "500mb"
         }
     }
 }
